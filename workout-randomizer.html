@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Training Roll</title>
+<style>
+  :root{
+    --bg:#171a29; --surface:#252a3d; --surface-2:#1e2233; --surface-3:#2c3145;
+    --line:#333950; --line-soft:#2a2f42;
+    --txt:#ffffff; --dim:#9296ad; --dim-2:#6d7288;
+    --teal:#4db6ac; --orange:#f4794a; --green:#7bc67e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+         background: var(--bg); color: var(--txt); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 18px 14px 56px; }
+  .mono { font-family: 'SF Mono','Roboto Mono',Menlo,Consolas,monospace; }
+  h1 { font-size: 25px; font-weight: 700; letter-spacing: -0.4px; }
+  .topbar { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:10px;
+            padding:0 4px 12px; border-bottom:1px solid var(--line-soft); }
+  .count { font-size: 11px; color: var(--dim-2); letter-spacing:.3px; }
+  .lead { font-size: 13px; color: var(--dim); line-height: 1.6; margin: 12px 4px 14px; }
+
+  /* ---- tabs ---- */
+  .viewtoggle { display:flex; gap:5px; padding:10px 0 4px; margin-bottom:10px; flex-wrap:wrap; }
+  .vt { cursor:pointer; border:none; background:var(--surface); color:var(--dim); border-radius:999px;
+        padding:8px 15px; font-size:12.5px; font-weight:600; transition:.14s; letter-spacing:.2px; }
+  .vt:hover { background:var(--surface-3); color:var(--txt); }
+  .vt.active { background:var(--orange); color:#fff; box-shadow:0 2px 10px rgba(244,121,74,.3); }
+
+  /* ---- buttons ---- */
+  .controls { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .btn { cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--txt);
+         border-radius:10px; padding:9px 13px; font-size:13px; font-weight:500; transition:.14s; }
+  .btn:hover { background:var(--surface-3); border-color:#3d435c; }
+  .btn:active { transform:scale(.98); }
+  .btn:disabled { opacity:.35; cursor:default; }
+  .btn-primary { background:var(--orange); color:#fff; border:none; font-weight:600; font-size:14px; padding:11px 20px;
+                 box-shadow:0 2px 12px rgba(244,121,74,.28); }
+  .btn-primary:hover { background:#ff8a5c; }
+  .btn-secondary { font-size:13.5px; padding:11px 15px; }
+  .mini { padding:7px 11px; font-size:13px; }
+  select.btn { -webkit-appearance:none; appearance:none; padding-right:28px;
+    background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+    background-position:calc(100% - 15px) 53%, calc(100% - 10px) 53%; background-size:5px 5px,5px 5px; background-repeat:no-repeat; }
+  select.btn option { background:var(--surface); color:var(--txt); }
+  .note { font-size:12px; color:var(--teal); margin-bottom:14px; line-height:1.55; padding:9px 12px;
+          background:rgba(77,182,172,.09); border-radius:9px; }
+  .section-divider { font-size:11px; color:var(--dim-2); text-transform:uppercase; letter-spacing:1.4px;
+                     margin:22px 4px 10px; font-weight:700; }
+
+  /* ---- cards ---- */
+  .card { border:none; border-radius:16px; margin-bottom:12px; overflow:hidden; background:var(--surface); }
+  .card.locked { box-shadow:inset 0 0 0 1.5px var(--accent-fade); }
+  .bar { height:4px; background: var(--accent); opacity:.85; }
+  .card.locked .bar { opacity:1; }
+  .card-body { padding:15px 16px 16px; }
+  .card-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:10px; }
+  .labels { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .type-label { font-size:11px; letter-spacing:1.3px; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .group-pill { font-size:9.5px; letter-spacing:.9px; text-transform:uppercase; color:var(--dim);
+                background:var(--surface-2); border:none; border-radius:999px; padding:4px 10px; font-weight:700; white-space:nowrap; }
+  .type-sub { font-size:11px; color:var(--dim-2); margin-top:4px; width:100%; }
+  .head-btns { display:flex; gap:6px; flex-shrink:0; }
+  .ex-name { font-size:20px; font-weight:700; margin-bottom:13px; letter-spacing:-0.3px; }
+  .edited-tag { font-size:10px; color:var(--accent); margin-left:6px; vertical-align:middle; }
+
+  /* ---- stat boxes ---- */
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:9px; cursor:pointer; }
+  .stat { background:var(--surface-2); border:none; border-radius:12px; padding:11px 13px; }
+  .stat-label { font-size:9.5px; color:var(--dim-2); text-transform:uppercase; letter-spacing:1.1px; margin-bottom:6px; font-weight:700; }
+  .stat-val { font-size:14.5px; color:var(--txt); line-height:1.4; word-break:break-word; font-weight:500; }
+  .stat-val.empty { color:#4c5165; }
+
+  /* ---- forms ---- */
+  .edit-grid { display:grid; gap:10px; margin-top:11px; }
+  .field-label { font-size:10px; color:var(--dim-2); display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:1.1px; font-weight:700; }
+  input.f, textarea.f { width:100%; background:var(--surface-2); border:1px solid var(--line); color:var(--txt);
+                        border-radius:10px; padding:10px 12px; font-size:13.5px; outline:none; }
+  input.f:focus, textarea.f:focus { border-color:var(--teal); }
+  .edit-btns { display:flex; gap:8px; margin-top:3px; flex-wrap:wrap; }
+
+  /* ---- swap panel ---- */
+  .browse { margin-top:14px; border-top:1px solid var(--line-soft); padding-top:13px; }
+  .browse-hint { font-size:11px; color:var(--dim-2); margin-bottom:9px; }
+  .chips { display:grid; grid-template-columns:1fr 1fr; gap:6px; max-height:240px; overflow-y:auto; }
+  .chip { cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--dim);
+          border-radius:9px; padding:8px 10px; font-size:12px; text-align:left; transition:.12s; }
+  .chip:hover { background:var(--surface-3); color:var(--txt); }
+  .chip.active { border-color:var(--accent); color:var(--txt); background:var(--surface-3); }
+  .dot { color:var(--dim-2); font-size:10px; }
+
+  /* ---- library ---- */
+  .lib-type { margin-bottom:18px; }
+  .lib-type-head { font-size:12px; letter-spacing:1.3px; text-transform:uppercase; color:var(--accent); font-weight:700;
+                   padding:10px 14px; background:var(--surface); border-radius:12px 12px 0 0; margin-bottom:2px;
+                   display:flex; align-items:center; gap:7px; }
+  .lib-count { color:var(--dim-2); font-weight:600; margin-left:auto; letter-spacing:0; font-size:11px; }
+  .lib-row { border:none; border-radius:0; background:var(--surface); padding:12px 14px; margin-bottom:2px; }
+  .lib-row:last-child { border-radius:0 0 12px 12px; }
+  .lib-row-main { display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer; }
+  .lib-row-name { font-size:14.5px; font-weight:600; }
+  .lib-row-stats-line { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-top:5px; }
+  .lib-row-stats { font-size:12px; color:var(--dim); }
+  .lib-row-stats .mono { color:var(--dim); }
+  .lib-how { font-size:12.5px; color:var(--dim); line-height:1.6; margin-top:9px; padding-left:11px; border-left:2px solid var(--accent); }
+
+  /* ---- log button ---- */
+  .logbtn.todo { background:var(--accent); color:#12141f; border:none; font-weight:700; }
+  .logbtn.done { background:transparent; color:var(--accent); border:1px solid var(--accent-fade); }
+  .logbtn-big { width:100%; text-align:center; padding:12px; margin-top:12px; border-radius:11px; font-size:13.5px; }
+  .logbtn-sm { white-space:nowrap; padding:6px 11px; font-size:12px; }
+  .logbtn-sm.done { color:var(--teal); border-color:rgba(77,182,172,.5); }
+
+  /* ---- log tab ---- */
+  .log-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
+  .log-date { font-size:19px; font-weight:700; }
+  .log-sub { font-size:12.5px; color:var(--dim); margin-top:3px; }
+  .log-row { border:none; border-radius:12px; background:var(--surface); padding:12px 14px; margin-bottom:7px; }
+  .log-row-main { display:flex; align-items:center; gap:9px; }
+  .log-row-name { font-size:14.5px; font-weight:600; flex:1; min-width:0; }
+  .log-row-time { font-size:11.5px; color:var(--dim); white-space:nowrap; }
+  .log-row-detail { font-size:12px; color:var(--dim); margin-top:6px; word-break:break-word; }
+  .hist-toggle { font-size:12.5px; color:var(--teal); cursor:pointer; padding:13px 4px; border-top:1px solid var(--line-soft); margin-top:10px; font-weight:600; }
+  .hist-day { font-size:11px; color:var(--dim-2); text-transform:uppercase; letter-spacing:1.2px; margin:18px 4px 9px; font-weight:700; }
+  .empty-note { font-size:13px; color:var(--dim); padding:18px 14px; line-height:1.6; background:var(--surface); border-radius:12px; }
+
+  /* ---- how to perform ---- */
+  .how { margin-top:11px; background:var(--surface-2); border:none; border-left:3px solid var(--accent);
+         border-radius:12px; padding:12px 14px; }
+  .how-label { font-size:9.5px; color:var(--dim-2); text-transform:uppercase; letter-spacing:1.1px; margin-bottom:7px; font-weight:700; }
+  .how-cue { font-size:13.5px; color:var(--txt); line-height:1.6; }
+  .how-proto { font-size:11.5px; color:var(--dim); line-height:1.55; margin-top:9px; padding-top:9px; border-top:1px solid var(--line-soft); }
+
+  /* ---- yoga ---- */
+  .yoga-seq { margin-top:9px; padding-left:20px; font-size:12.5px; color:var(--dim); line-height:1.95; }
+  .yoga-seq li { cursor:pointer; }
+  .yoga-seq li:hover { color:var(--txt); }
+  .yoga-seq li.current { color:var(--accent); font-weight:700; }
+  .yoga-pos { margin-top:11px; background:var(--surface-2); border:none; border-radius:12px; padding:12px 14px; }
+  .yoga-pos-label { font-size:9.5px; color:var(--dim-2); text-transform:uppercase; letter-spacing:1.1px; margin-bottom:6px; font-weight:700; }
+  .yoga-pos-val { font-size:14.5px; color:var(--txt); margin-bottom:11px; line-height:1.4; }
+  .yoga-pos-btns { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+  /* ---- modals ---- */
+  .modal-backdrop { position:fixed; inset:0; background:rgba(10,12,20,.75); display:flex; align-items:center; justify-content:center; padding:18px; z-index:50; }
+  .modal { background:var(--surface); border:none; border-radius:18px; padding:20px; max-width:480px; width:100%; max-height:85vh; overflow-y:auto; }
+  .modal-head { display:flex; justify-content:space-between; align-items:center; font-size:17px; font-weight:700; margin-bottom:10px; gap:10px; }
+  .modal-sub { font-size:12.5px; color:var(--dim); line-height:1.6; margin-bottom:15px; }
+  .modal-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:13px; }
+  .steps { margin:0 0 4px 18px; padding:0; font-size:12.5px; color:var(--dim); line-height:1.8; }
+  .steps li { margin-bottom:4px; }
+  .steps code { background:var(--surface-2); border:1px solid var(--line); border-radius:5px; padding:2px 6px;
+                font-family:'SF Mono',Menlo,monospace; font-size:11.5px; color:var(--txt); }
+  .hk-row { display:flex; gap:10px; margin-bottom:13px; flex-wrap:wrap; }
+  .hk-row > div { flex:1; min-width:130px; }
+  .hk-warn { font-size:12.5px; color:var(--orange); line-height:1.55; margin-bottom:13px; }
+  .footer { font-size:11px; color:var(--dim-2); text-align:center; margin-top:26px; line-height:1.6; }
+
+  /* ---- training breakdown matrix ---- */
+  .bd{ width:100%; border-collapse:separate; border-spacing:4px; font-size:12px; }
+  .bd th{ font-size:9px; letter-spacing:.7px; text-transform:uppercase; color:var(--dim-2);
+          font-weight:700; padding:4px 2px; text-align:center; border:none; }
+  .bd th.rowh{ text-align:left; padding-left:4px; min-width:78px; }
+  .bd td{ text-align:center; padding:9px 4px; border:none; border-radius:9px;
+          background:rgba(255,255,255,.04); color:var(--dim-2); font-weight:700; font-size:13px; }
+  .bd td.rowh{ text-align:left; font-size:11px; letter-spacing:.7px; text-transform:uppercase;
+               font-weight:700; padding-left:9px; background:transparent; }
+  .bd td.tot{ background:rgba(255,255,255,.02); color:var(--dim); }
+  .bd tr.totrow td{ background:transparent; color:var(--dim); font-size:12px; }
+  .bd-note{ font-size:11px; color:var(--dim-2); margin-top:10px; line-height:1.6; }
+  .bd-chips{ display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:8px; margin-top:12px; }
+  .bd-chip{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.055);
+            border-radius:11px; padding:10px 12px; display:flex; align-items:center; gap:9px; }
+  .bd-chip .sw{ width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .bd-chip .nm{ font-size:12px; color:var(--dim); font-weight:600; flex:1; }
+  .bd-chip .ct{ font-size:16px; font-weight:700; }
+  /* ---- calendar ---- */
+  .cal-panel { background:var(--surface); border-radius:16px; padding:16px; margin-bottom:12px; }
+  .cal-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .cal-title { font-size:18px; font-weight:700; }
+  .cal-nav { display:flex; gap:6px; align-items:center; }
+  .rings { display:flex; gap:10px; justify-content:space-around; flex-wrap:wrap; }
+  .ring-wrap { text-align:center; flex:1; min-width:96px; }
+  .ring-cap { font-size:12.5px; color:var(--dim); margin-top:8px; font-weight:600; }
+  .ring-val { font-size:23px; font-weight:700; fill:var(--txt); }
+  .ring-unit { font-size:10px; fill:var(--dim-2); }
+  .legend { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px; }
+  .legend-item { display:flex; align-items:center; gap:9px; background:var(--surface-2); border-radius:11px; padding:11px 12px; }
+  .legend-swatch { width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+  .legend-name { font-size:12.5px; color:var(--dim); font-weight:600; flex:1; }
+  .legend-count { font-size:16px; font-weight:700; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .cal-dow { font-size:10px; color:var(--dim-2); text-align:center; font-weight:700; text-transform:uppercase; letter-spacing:.6px; padding-bottom:5px; }
+  .cal-cell { aspect-ratio:1; background:var(--surface-2); border-radius:9px; display:flex; flex-direction:column;
+              align-items:center; justify-content:center; gap:3px; cursor:pointer; transition:.12s; padding:2px; }
+  .cal-cell.blank { background:transparent; cursor:default; }
+  .cal-cell:hover:not(.blank) { background:var(--surface-3); }
+  .cal-cell.today { box-shadow:inset 0 0 0 1.5px var(--orange); }
+  .cal-cell.sel { background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--teal); }
+  .cal-num { font-size:12px; font-weight:600; color:var(--dim); }
+  .cal-cell.has .cal-num { color:var(--txt); }
+  .cal-dots { display:flex; gap:2.5px; height:5px; align-items:center; }
+  .cal-dot { width:5px; height:5px; border-radius:50%; }
+  .cal-daylist { margin-top:14px; }
+  .cal-empty { font-size:12.5px; color:var(--dim-2); text-align:center; padding:16px 0; }
+  .streak { display:flex; gap:9px; margin-top:12px; }
+  .streak-box { flex:1; background:var(--surface-2); border-radius:11px; padding:12px; text-align:center; }
+  .streak-n { font-size:21px; font-weight:700; }
+  .streak-l { font-size:10px; color:var(--dim-2); text-transform:uppercase; letter-spacing:1px; margin-top:4px; font-weight:700; }
+  ::-webkit-scrollbar { width:8px; }
+  ::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
+
+  /* ============ Liquid Glass layer ============ */
+  html{ background:#0b0e18; }
+  body{
+    background-color:#0b0e18;
+    background-image:
+      radial-gradient(1100px 620px at 8% -12%, rgba(77,182,172,.20), transparent 62%),
+      radial-gradient(900px 520px at 96% -4%, rgba(244,121,74,.17), transparent 58%),
+      radial-gradient(820px 640px at 46% 112%, rgba(179,157,219,.16), transparent 62%),
+      radial-gradient(700px 500px at 88% 78%, rgba(90,169,230,.12), transparent 60%);
+    background-attachment:fixed;
+    background-repeat:no-repeat;
+  }
+  /* large frosted panels */
+  .card,.sec,.modal,.med,.dayhead,.cal-panel,.drop,.lib-type-head{
+    background:rgba(40,46,68,.46);
+    -webkit-backdrop-filter:blur(24px) saturate(170%);
+    backdrop-filter:blur(24px) saturate(170%);
+    border:1px solid rgba(255,255,255,.085);
+    box-shadow:0 10px 34px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  .card.locked{
+    box-shadow:inset 0 0 0 1.5px var(--accent-fade), 0 10px 34px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  .lib-type-head{ border-bottom:none; box-shadow:inset 0 1px 0 rgba(255,255,255,.07); }
+  /* pills + buttons */
+  .vt{
+    background:rgba(255,255,255,.065);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    backdrop-filter:blur(16px) saturate(150%);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .vt:hover{ background:rgba(255,255,255,.12); }
+  .vt.active{
+    background:rgba(244,121,74,.88);
+    border-color:rgba(255,255,255,.22);
+    box-shadow:0 4px 18px rgba(244,121,74,.34), inset 0 1px 0 rgba(255,255,255,.28);
+  }
+  .btn{
+    background:rgba(255,255,255,.075);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    backdrop-filter:blur(16px) saturate(150%);
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .btn:hover{ background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.17); }
+  .btn-primary{
+    background:rgba(244,121,74,.9);
+    border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 22px rgba(244,121,74,.34), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .btn-primary:hover{ background:rgba(255,138,92,.95); }
+  .logbtn.todo,.logbtn:not(.done){ box-shadow:inset 0 1px 0 rgba(255,255,255,.28); }
+  /* inner surfaces — translucent but not blurred, so long lists stay fast */
+  .stat,.kv,.how,.yoga-pos,.legend-item,.streak-box,.sbox,.adh,.tk,.find,.disc,
+  .lib-row,.log-row,.cal-cell,.chip,.group-pill,.pill,.empty,.note,.steps code{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.055);
+  }
+  .lib-row{ border-left:none; border-right:none; }
+  .cal-cell.blank{ background:transparent; border-color:transparent; }
+  .chip:hover{ background:rgba(255,255,255,.12); }
+  .chip.active{ background:rgba(255,255,255,.13); border-color:var(--accent); }
+  .pill.done{ background:var(--c); border-color:transparent; }
+  .bar-out,.adh-bar{ background:rgba(255,255,255,.08); }
+  /* inputs */
+  input.f,select.f,textarea.f,.dose-in{
+    background:rgba(255,255,255,.055);
+    border:1px solid rgba(255,255,255,.11);
+  }
+  input.f:focus,select.f:focus,textarea.f:focus,.dose-in:focus{
+    background:rgba(255,255,255,.085);
+  }
+  /* overlays */
+  .modal-backdrop{
+    background:rgba(8,10,18,.5);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    backdrop-filter:blur(14px) saturate(140%);
+  }
+  .modal{ box-shadow:0 24px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1); }
+  .topbar{ border-bottom:1px solid rgba(255,255,255,.09); }
+  .hist-toggle{ border-top:1px solid rgba(255,255,255,.09); }
+  .how-proto{ border-top:1px solid rgba(255,255,255,.09); }
+  th{ border-bottom:1px solid rgba(255,255,255,.12); }
+  td{ border-bottom:1px solid rgba(255,255,255,.06); }
+  @media (prefers-reduced-transparency: reduce){
+    .card,.sec,.modal,.med,.dayhead,.cal-panel,.drop,.lib-type-head,.vt,.btn{
+      -webkit-backdrop-filter:none; backdrop-filter:none; background:#252a3d;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>Training Roll</h1>
+    <span class="mono count" id="count"></span>
+  </div>
+  <div class="viewtoggle">
+    <button class="vt active" id="tabRoll">Resistance</button>
+    <button class="vt" id="tabFocus">Focus</button>
+    <button class="vt" id="tabCardio">Cardio</button>
+    <button class="vt" id="tabMobility">Mobility</button>
+    <button class="vt" id="tabCal">Calendar</button>
+    <button class="vt" id="tabLib">Library</button>
+    <button class="vt" id="tabLog">Log</button>
+  </div>
+  <div class="controls" id="globalControls">
+    <button class="btn btn-primary" id="gRoll">&#8635; Roll unlocked</button>
+    <button class="btn btn-secondary" id="gRollAll">Roll all</button>
+    <button class="btn btn-secondary" id="gUnlock">Unlock all</button>
+    <select class="btn btn-secondary" id="varietyMode" title="How often a movement group may be left out to improve variety">
+      <option value="0" selected>Cover all 5 groups</option>
+      <option value="0.15">Skip a group rarely</option>
+      <option value="0.3">Skip a group occasionally</option>
+      <option value="0.45">Skip a group often</option>
+    </select>
+    <button class="btn btn-secondary" id="resetVariety" title="Clear the balancing memory">Reset balance</button>
+  </div>
+
+  <div id="rollView">
+    <p class="lead">Resistance training. Each roll gives one exercise per training type, matched so all five movement groups (Push, Pull, Core, Legs, Full Body) are covered exactly once. Lock cards to keep them, re-roll the rest. Tap the stats to edit records, or Log once you've done it.</p>
+    <p class="note" id="note"></p>
+    <div id="cards"></div>
+  </div>
+
+  <div id="libView" style="display:none">
+    <p class="lead">Every exercise in your program - resistance, focus, cardio and mobility. Tap any to view or edit its RM and record. A hollow &#9675; marks exercises with no numbers yet.</p>
+    <div id="lib"></div>
+  </div>
+
+  <div id="cardioView" style="display:none">
+    <p class="lead">Rolls one cardio exercise at random. Bag &amp; Rope Work is a single combined session covering Punching Bag, Speed Bag, Line Jumps, and Ropes. Tap Swap to choose a specific exercise instead.</p>
+    <div id="cardio"></div>
+  </div>
+
+  <div id="focusView" style="display:none">
+    <p class="lead">One random pick each for Chest, Forearm, and Band work &mdash; independent of the main roll. Lock any card to keep it while you re-roll the others.</p>
+    <p class="note" id="focusNote"></p>
+    <div id="focus"></div>
+  </div>
+
+  <div id="mobilityView" style="display:none">
+    <p class="lead">Rolls one of four mobility sessions at random: Yoga Flow, PNF Stretches, Pilates, or Foam, Balance &amp; Rope. Each bundles its full routine into one exercise. Tap Swap to choose a specific one instead.</p>
+    <div id="mobility"></div>
+  </div>
+
+  <div id="calView" style="display:none">
+    <div id="cal"></div>
+  </div>
+
+  <div id="logView" style="display:none">
+    <div id="log"></div>
+  </div>
+
+  <p class="footer">Records and logs persist in this browser. RM = your listed rep max &middot; type record = working prescription for that modality.</p>
+</div>
+
+<div class="modal-backdrop" id="healthModal" style="display:none">
+  <div class="modal">
+    <div class="modal-head"><span>Send to Apple Health</span><button class="btn mini" data-act="closeHealth">Close</button></div>
+    <p class="modal-sub">Apple gives web pages no access to Health data, so this hands the workout to the Shortcuts app, which logs it for you. One-time setup below, then it's a single tap after each session.</p>
+    <p class="hk-warn" id="hkWarn" style="display:none"></p>
+    <div class="hk-row">
+      <div><label class="field-label">Duration (min)</label><input class="f mono" id="hkMinutes" inputmode="numeric"></div>
+      <div><label class="field-label">Shortcut name</label><input class="f mono" id="hkName" placeholder="Log Training Roll Workout"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" style="background:#e8e6e1;color:#0e0f12;border:none;font-weight:600" data-act="hkSend">&#10084; Send to Health</button>
+      <button class="btn" data-act="hkCopy">Copy payload</button>
+      <button class="btn" data-act="hkSteps">Setup steps</button>
+      <button class="btn" data-act="hkWeight" id="hkWeightBtn" style="display:none">Pull bodyweight</button>
+    </div>
+    <div id="hkStepsBox" style="display:none">
+      <p class="modal-sub" style="margin-bottom:8px"><b>One-time setup in the Shortcuts app:</b></p>
+      <ol class="steps">
+        <li>New shortcut, named exactly what's in the box above.</li>
+        <li>Add <code>Get Dictionary from Input</code>.</li>
+        <li>Add <code>Log Workout</code>. Set Type to <b>Traditional Strength Training</b>.</li>
+        <li>For Duration, pick the <code>minutes</code> key from the dictionary.</li>
+        <li>Optional: add <code>Show Result</code> so you can see it worked.</li>
+        <li>Enable <b>Shortcuts &rsaquo; Advanced &rsaquo; Allow Running Scripts</b>.</li>
+      </ol>
+      <p class="modal-sub" style="margin-top:10px">The payload also carries <code>date</code>, <code>exercises</code>, <code>detail</code> and <code>volume</code> if you want to log a note or extra samples.</p>
+    </div>
+    <textarea readonly class="f mono" id="hkPayload" style="height:120px;margin-top:12px"></textarea>
+  </div>
+</div>
+<div class="modal-backdrop" id="exportModal" style="display:none">
+  <div class="modal">
+    <div class="modal-head"><span>Export Log</span><button class="btn mini" data-act="closeExport">Close</button></div>
+    <p class="modal-sub">A download should start automatically. If it doesn't, copy the CSV below and paste it into Notes, Sheets, Excel, or an email.</p>
+    <div class="modal-btns">
+      <button class="btn" data-act="downloadCsv">&#11015; Download CSV</button>
+      <button class="btn" data-act="copyCsv">Copy to clipboard</button>
+    </div>
+    <textarea readonly class="f mono" id="csvText" style="height:200px"></textarea>
+  </div>
+</div>
+
+<script>
+const DB = {"POWER":[{"name":"Medicine Ball Throws","g":"Push","rm":"30","record":"30 × 5 × 5","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Medicine Ball Slam","g":"Push","rm":"30","record":"25 × 5 × 5","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Clap Push Ups","g":"Push","rm":"Body+30","record":"Body × 5 × 5","how":"Explosive drive off the chest - keep it light enough that the bar accelerates the whole way, and reset between reps."},{"name":"Push Jerk","g":"Push","rm":"120","record":"80 × 5 × 5","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Push Press","g":"Push","rm":"145","record":"85 × 5 × 5","how":"Dip and drive with the legs, then punch the bar up fast and lock out hard. Reset your brace before every rep."},{"name":"Smith Machine Bench Press Throw","g":"Push","rm":"190","record":"125 × 5 × 5","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Band Tension Bench Press","g":"Push","rm":"","record":"","how":"Explosive drive off the chest - keep it light enough that the bar accelerates the whole way, and reset between reps."},{"name":"Kettlebell Push Press","g":"Push","rm":"","record":"","how":"Dip and drive with the legs, then punch the bar up fast and lock out hard. Reset your brace before every rep."},{"name":"Medicine Ball Chest Pass","g":"Push","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Jump Dips","g":"Push","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Smith Machine Close-Grip Bench Throw","g":"Push","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Speed Bench Press","g":"Push","rm":"","record":"","how":"Explosive drive off the chest - keep it light enough that the bar accelerates the whole way, and reset between reps."},{"name":"Landmine Press","g":"Push","rm":"","record":"","how":"Dip and drive with the legs, then punch the bar up fast and lock out hard. Reset your brace before every rep."},{"name":"Barbell Curls","g":"Pull","rm":"95","record":"60 × 5 × 5","how":"Accelerate the weight up fast while keeping the elbows pinned - useful for cleans and pulls, but not a true power lift."},{"name":"Mid-Thigh Hang High Pulls","g":"Pull","rm":"130","record":"95 × 5 × 5","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Muscle Ups","g":"Pull","rm":"Body+10","record":"Body","how":"Explosive pull - drive the elbows down hard and fast, or kip and turn over aggressively if it's a muscle-up variation."},{"name":"Pendlay Row","g":"Pull","rm":"155","record":"105 × 5 × 5","how":"Explosive pull to the torso with a fast, aggressive elbow drive - keep the trunk rigid and let the back do the accelerating."},{"name":"Power Clean","g":"Pull","rm":"160","record":"105 × 5 × 5","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Weighted Pull-Up Throw","g":"Pull","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Explosive Pull-Up","g":"Pull","rm":"","record":"","how":"Explosive pull - drive the elbows down hard and fast, or kip and turn over aggressively if it's a muscle-up variation."},{"name":"Speed Lat Pulldown","g":"Pull","rm":"","record":"","how":"Explosive pull - drive the elbows down hard and fast, or kip and turn over aggressively if it's a muscle-up variation."},{"name":"Explosive Barbell Row","g":"Pull","rm":"","record":"","how":"Explosive pull to the torso with a fast, aggressive elbow drive - keep the trunk rigid and let the back do the accelerating."},{"name":"Renegade Row","g":"Pull","rm":"","record":"","how":"Explosive pull to the torso with a fast, aggressive elbow drive - keep the trunk rigid and let the back do the accelerating."},{"name":"Hang Clean","g":"Pull","rm":"","record":"","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Snatch-Grip Deadlift Speed Pull","g":"Pull","rm":"","record":"","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Face Pull","g":"Pull","rm":"","record":"","how":"Explosive pull to the torso with a fast, aggressive elbow drive - keep the trunk rigid and let the back do the accelerating."},{"name":"Straight Arm Pulldown","g":"Pull","rm":"","record":"","how":"Explosive pull - drive the elbows down hard and fast, or kip and turn over aggressively if it's a muscle-up variation."},{"name":"Cable Rotational Chop","g":"Core","rm":"57.5","record":"35 × 5 × 5","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Landmine Rotation","g":"Core","rm":"55","record":"40 × 5 × 5","how":"Rotate explosively from the hips and let the arms follow. Pivot the back foot and finish with full hip turn."},{"name":"Medicine Ball Rotational Scoop Toss","g":"Core","rm":"45","record":"25 × 5 × 5","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Medicine Ball Rotational Throw","g":"Core","rm":"45","record":"25 × 5 × 5","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Pullover Machine","g":"Core","rm":"280","record":"240 × 5 × 5","how":"Explosive pull - drive the elbows down hard and fast, or kip and turn over aggressively if it's a muscle-up variation."},{"name":"Single-Arm Kettlebell Swing","g":"Core","rm":"50","record":"30 × 5 × 5","how":"Snap the hips hard - the bell floats, your arms are just rope. Sharp glute contraction at the top, and let it fall before hinging again."},{"name":"Standing Sternum Anti-Rotation Snap","g":"Core","rm":"30","record":"20 × 5 × 5","how":"Rotate explosively from the hips and let the arms follow. Pivot the back foot and finish with full hip turn."},{"name":"Sit Up Machine","g":"Core","rm":"","record":"","how":"Explosive flexion - throw the legs or trunk up fast, but control the return to protect the low back."},{"name":"Rotational Med Ball Slam","g":"Core","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Kipping Toes-to-Bar","g":"Core","rm":"","record":"","how":"Explosive flexion - throw the legs or trunk up fast, but control the return to protect the low back."},{"name":"Medicine Ball Sit-Up Throw","g":"Core","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Medicine Ball V-Up","g":"Core","rm":"","record":"","how":"Explosive flexion - throw the legs or trunk up fast, but control the return to protect the low back."},{"name":"Smith Machine Hip Thrust Throw","g":"Core","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"GHD Sit-Up","g":"Core","rm":"","record":"","how":"Explosive flexion - throw the legs or trunk up fast, but control the return to protect the low back."},{"name":"Reverse Hyperextension Explosive","g":"Core","rm":"","record":"","how":"Speed off the floor and through the hips - light enough that the bar genuinely accelerates. Reset your setup on every rep."},{"name":"Box Jumps","g":"Legs","rm":"All Boxes Stacked","record":"Biggest+Second+Smallest Box × 5 × 5","how":"Land in the same position you took off from - soft, quiet, athletic. Step down every time; jumping down adds injury risk with zero benefit."},{"name":"Broad Jump","g":"Legs","rm":"Full Mat Jump","record":"Second Half Mat × 5 jumps × 5","how":"Load the hips, swing the arms, and jump for distance. Stick the landing with bent knees and reset fully."},{"name":"Jump Squats","g":"Legs","rm":"230","record":"150 × 5 × 5","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Sled Push","g":"Legs","rm":"275","record":"180 × 5 × 5","how":"Light sled, maximum acceleration - drive the first few steps like a sprint start with a strong forward lean."},{"name":"Speed Deadlift","g":"Legs","rm":"225","record":"145 × 5 × 5","how":"Speed off the floor and through the hips - light enough that the bar genuinely accelerates. Reset your setup on every rep."},{"name":"Trap Bar Jumps","g":"Legs","rm":"260","record":"170 × 5 × 5","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Depth Jump","g":"Legs","rm":"","record":"","how":"Step off the box, and the moment you touch, rebound instantly. Minimise ground contact - this is about the bounce, not the height."},{"name":"Hang Power Clean","g":"Legs","rm":"","record":"","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Single-Leg Box Jump","g":"Legs","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Split Jump","g":"Legs","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Single Leg Bounding","g":"Legs","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Step-Up Jump","g":"Legs","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Power Clean From Floor","g":"Legs","rm":"","record":"","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Speed Squat","g":"Legs","rm":"","record":"","how":"Light load, maximum bar speed out of the hole. Reset your brace between reps rather than bouncing."},{"name":"Barbell Thrusters","g":"Full Body","rm":"145","record":"95 × 5 × 5","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Clean and Jerk","g":"Full Body","rm":"135","record":"90 × 5 × 5","how":"Patient pull to the knee, violent extension, fast elbows. Split hard under the jerk and lock the bar over the mid-foot."},{"name":"Hang Snatch","g":"Full Body","rm":"120","record":"75 × 5 × 5","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Kettlebell Swings","g":"Legs","rm":"55","record":"35 × 5 × 5","how":"Snap the hips hard - the bell floats, your arms are just rope. Sharp glute contraction at the top, and let it fall before hinging again."},{"name":"Power Snatch","g":"Full Body","rm":"105","record":"70 × 5 × 5","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Plyo Push-Up to Squat Jump","g":"Full Body","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Burpee Broad Jump","g":"Full Body","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Medicine Ball Tuck Jump","g":"Full Body","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Push Pull Sled","g":"Full Body","rm":"","record":"","how":"Light sled, maximum acceleration - drive the first few steps like a sprint start with a strong forward lean."},{"name":"Clean to Farmers Carry Sprint","g":"Full Body","rm":"","record":"","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Bulgarian Split Squat Jumps","g":"Legs","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Depth Push-ups","g":"Push","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"DB Snatch","g":"Pull","rm":"","record":"","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Barbell High Pull","g":"Pull","rm":"","record":"","how":"This is the purest expression of power - stay light enough to be violent. Full triple extension, aggressive turnover, and reset your setup on every single rep."},{"name":"Med Ball Rotational Scoop Throw","g":"Pull","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Inverted Row","g":"Pull","rm":"","record":"","how":"Explosive pull to the torso with a fast, aggressive elbow drive - keep the trunk rigid and let the back do the accelerating."},{"name":"Med Ball Rotational Throw","g":"Core","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Med Ball Overhead Slam","g":"Core","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Landmine Explosive Rotation","g":"Core","rm":"","record":"","how":"Rotate explosively from the hips and let the arms follow. Pivot the back foot and finish with full hip turn."},{"name":"Kneeling Med Ball Chest Pass","g":"Core","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Mountain Climbers","g":"Core","rm":"","record":"","how":"Attack each rep explosively and reset - this is about output per rep, not how many you can string together."},{"name":"Cable Woodchopper","g":"Core","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."},{"name":"Wall Ball Shots","g":"Full Body","rm":"","record":"","how":"Throw for maximum distance or velocity, not for reps. Full wind-up, whole-body sequence hips-to-hands, and release with total commitment."},{"name":"Burpees","g":"Full Body","rm":"","record":"","how":"Attack each rep explosively and reset - this is about output per rep, not how many you can string together."},{"name":"Plyo Push-Ups","g":"Push","rm":"","record":"","how":"Reset fully between reps - land soft, stand tall, then go again. Step down from boxes rather than jumping down, and end the set the instant height drops."}],"STRENGTH":[{"name":"Barbell Overhead Press","g":"Push","rm":"115","record":"105 × 5 × 5","how":"Squeeze the glutes and brace the ribs down so nothing leaks. Press around the face, then get the head through at lockout."},{"name":"Board Press","g":"Push","rm":"210","record":"190 × 5 × 5","how":"Set the shoulder blades back and down, big brace, controlled descent to the same touch point, then drive hard through the floor with the legs."},{"name":"Close Grip Bench Press","g":"Push","rm":"170","record":"150 × 5 × 5","how":"Set the shoulder blades back and down, big brace, controlled descent to the same touch point, then drive hard through the floor with the legs."},{"name":"Dips","g":"Push","rm":"Body+30","record":"Body+25 × 5 × 5","how":"Set the shoulder blades back and down, big brace, controlled descent to the same touch point, then drive hard through the floor with the legs."},{"name":"Floor Press","g":"Push","rm":"180","record":"165 × 5 × 5","how":"Set the shoulder blades back and down, big brace, controlled descent to the same touch point, then drive hard through the floor with the legs."},{"name":"Pause Bench Press","g":"Push","rm":"195","record":"175 × 4 × 5","how":"Full stop on the chest with the bar dead still for one second, no sinking, then explode without losing your arch."},{"name":"Push Press","g":"Push","rm":"145","record":"130 × 5 × 5","how":"Squeeze the glutes and brace the ribs down so nothing leaks. Press around the face, then get the head through at lockout."},{"name":"Spoto Press","g":"Push","rm":"205","record":"160 × 5 × 5","how":"Set the shoulder blades back and down, big brace, controlled descent to the same touch point, then drive hard through the floor with the legs."},{"name":"Z-Press","g":"Push","rm":"120","record":"110 × 5 × 5","how":"Squeeze the glutes and brace the ribs down so nothing leaks. Press around the face, then get the head through at lockout."},{"name":"Seated Barbell Press","g":"Push","rm":"","record":"","how":"Squeeze the glutes and brace the ribs down so nothing leaks. Press around the face, then get the head through at lockout."},{"name":"Pin Press","g":"Push","rm":"","record":"","how":"Set the shoulder blades back and down, big brace, controlled descent to the same touch point, then drive hard through the floor with the legs."},{"name":"JM Press","g":"Push","rm":"","record":"","how":"Heavier close-range work with the elbows tucked - drive to a hard lockout every rep."},{"name":"Dumbbell Bench Press","g":"Push","rm":"","record":"","how":"Set the shoulder blades back and down, big brace, controlled descent to the same touch point, then drive hard through the floor with the legs."},{"name":"Barbell Skull Crusher","g":"Push","rm":"","record":"","how":"Heavier close-range work with the elbows tucked - drive to a hard lockout every rep."},{"name":"Rolling Dumbbell Extension","g":"Push","rm":"","record":"","how":"Roll the dumbbells back past the head to a deep stretch, then extend hard - keep the elbows from flaring."},{"name":"Chest Supported Row","g":"Pull","rm":"140","record":"70 × 5 × 5","how":"Hold near-maximal load in the hardest joint angle. Build tension gradually to max over 2-3 seconds, then hold."},{"name":"Meadows Row","g":"Pull","rm":"100","record":"90 × 5 × 5","how":"Heavier load with a braced, fixed torso. Pull to the same point every rep and control the lowering."},{"name":"Seal Rows","g":"Pull","rm":"135","record":"120 × 5 × 5","how":"Heavier load with a braced, fixed torso. Pull to the same point every rep and control the lowering."},{"name":"Sumo Deadlift","g":"Pull","rm":"210","record":"185 × 5 × 5","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Weighted Pull-Ups","g":"Pull","rm":"Body+30","record":"Body+20 × 3","how":"Add weight and go strict. Full hang at the bottom, chin clearly over the bar, and control the descent."},{"name":"Weighted Rack Chins","g":"Pull","rm":"Body+45","record":"Body+35 × 5 × 5","how":"Feet on the rack so you can load heavy. Full hang to chin over the bar, and control the lowering."},{"name":"Towel Pull-Ups","g":"Pull","rm":"","record":"","how":"Add weight and go strict. Full hang at the bottom, chin clearly over the bar, and control the descent."},{"name":"Lat Pulldown","g":"Pull","rm":"","record":"","how":"Add weight and go strict. Full hang at the bottom, chin clearly over the bar, and control the descent."},{"name":"Barbell Row","g":"Pull","rm":"","record":"","how":"Heavier load with a braced, fixed torso. Pull to the same point every rep and control the lowering."},{"name":"Pendlay Row","g":"Pull","rm":"","record":"","how":"Heavier load with a braced, fixed torso. Pull to the same point every rep and control the lowering."},{"name":"Trap Bar Deadlift","g":"Legs","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Block Pull","g":"Pull","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Snatch-Grip Deadlift","g":"Pull","rm":"","record":"","how":"Heavier and slower, but the bar must still accelerate. Pull patiently off the floor, then explode once the bar passes the knee."},{"name":"Barbell Curl","g":"Pull","rm":"","record":"","how":"Heavier load with strict form - no swinging, elbows locked to the ribs, and full lockout at the bottom."},{"name":"Zottman Curl","g":"Pull","rm":"","record":"","how":"Heavier load with strict form - no swinging, elbows locked to the ribs, and full lockout at the bottom."},{"name":"Ab Wheel Rollout","g":"Core","rm":"Body+25","record":"Slow Low Roll × 5 × 5","how":"Go to the deepest position you can control without the low back arching. Add load or extend the lever rather than adding reps."},{"name":"Cable Crunch","g":"Core","rm":"100","record":"90 × 5 × 5","how":"Add weight and go strict. Full range, no swinging, and a deliberate pause at the top."},{"name":"Dragon Flag","g":"Core","rm":"Body+20","record":"Body+10","how":"Hold near-maximal load in the hardest joint angle. Build tension gradually to max over 2-3 seconds, then hold."},{"name":"Half-Kneeling Pallof Press","g":"Core","rm":"25","record":"25 × 5 × 5","how":"Heavier load, longer lever. Stand tall and refuse to let the trunk rotate an inch."},{"name":"Landmine Rotation","g":"Core","rm":"60","record":"55 × 5 × 5","how":"Slow it down and go heavier - resist the rotation as much as you create it, keeping the ribs locked to the pelvis."},{"name":"Loaded Deadbug","g":"Core","rm":"25 Each Limb","record":"20 Each Limb","how":"Hold near-maximal load in the hardest joint angle. Build tension gradually to max over 2-3 seconds, then hold."},{"name":"Strict Hanging Leg Raises","g":"Core","rm":"Body+20","record":"Body+16","how":"Add weight and go strict. Full range, no swinging, and a deliberate pause at the top."},{"name":"Suitcase Carry","g":"Core","rm":"105","record":"80 × 1 Blue Lap × 5","how":"Go heavy for short distance. Squeeze the handles, brace the trunk, and walk tall without leaning away from the load."},{"name":"Barbell Rollout","g":"Core","rm":"","record":"","how":"Go to the deepest position you can control without the low back arching. Add load or extend the lever rather than adding reps."},{"name":"Farmers Carry","g":"Full Body","rm":"","record":"","how":"Go heavy for short distance. Squeeze the handles, brace the trunk, and walk tall without leaning away from the load."},{"name":"Toes-to-Bar","g":"Core","rm":"","record":"","how":"Add weight and go strict. Full range, no swinging, and a deliberate pause at the top."},{"name":"GHD Sit-Up","g":"Core","rm":"","record":"","how":"Add weight and go strict. Full range, no swinging, and a deliberate pause at the top."},{"name":"Barbell Good Morning","g":"Core","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Hyperextension","g":"Core","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"GHD Back Extension","g":"Core","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Reverse Hyperextension","g":"Core","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Valsalva Squat","g":"Core","rm":"","record":"","how":"Big brace before you unrack, controlled descent, and drive the hips and chest up together. Full depth with knees tracking the toes."},{"name":"Zercher Carry","g":"Core","rm":"","record":"","how":"Go heavy for short distance. Squeeze the handles, brace the trunk, and walk tall without leaning away from the load."},{"name":"Yoke Carry","g":"Core","rm":"","record":"","how":"Go heavy for short distance. Squeeze the handles, brace the trunk, and walk tall without leaning away from the load."},{"name":"Belt Squat","g":"Legs","rm":"320","record":"290 × 5 × 5","how":"Big brace before you unrack, controlled descent, and drive the hips and chest up together. Full depth with knees tracking the toes."},{"name":"Bulgarian Split Squat","g":"Legs","rm":"130","record":"100 × 5 × 5","how":"Heavier and slower - front shin vertical, torso tall, and drive through the whole foot to a full lockout."},{"name":"Deadlift","g":"Pull","rm":"235","record":"210 × 5 × 5","how":"Wedge into the bar, hips set, lats pulling the bar into your legs. Push the floor away and let the bar drag up your shins."},{"name":"Deficit Deadlift","g":"Legs","rm":"210","record":"190 × 5 × 5","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Front Squat","g":"Legs","rm":"225","record":"195 × 5 × 5","how":"Elbows high the whole way - the moment they drop, the bar dumps forward. Stay upright and drive straight up."},{"name":"Low Bar Back Squat","g":"Legs","rm":"240","record":"210 × 5","how":"Bar sits on the rear delts, wider stance, more forward lean. Break at the hips first and drive the hips up out of the hole."},{"name":"Rack Pulls","g":"Pull","rm":"280","record":"255 × 5 × 5","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Romanian Deadlift","g":"Legs","rm":"190","record":"165 × 5 × 5","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Hack Squat","g":"Legs","rm":"","record":"","how":"Big brace before you unrack, controlled descent, and drive the hips and chest up together. Full depth with knees tracking the toes."},{"name":"Sumo Squat","g":"Legs","rm":"","record":"","how":"Big brace before you unrack, controlled descent, and drive the hips and chest up together. Full depth with knees tracking the toes."},{"name":"Hip Thrust","g":"Legs","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Glute-Ham Raise","g":"Legs","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Box Squat","g":"Legs","rm":"","record":"","how":"Big brace before you unrack, controlled descent, and drive the hips and chest up together. Full depth with knees tracking the toes."},{"name":"Single Leg Romanian Deadlift","g":"Legs","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Lunge","g":"Legs","rm":"","record":"","how":"Heavier and slower - front shin vertical, torso tall, and drive through the whole foot to a full lockout."},{"name":"Step Ups","g":"Legs","rm":"","record":"","how":"Heavier and slower - front shin vertical, torso tall, and drive through the whole foot to a full lockout."},{"name":"Reverse Lunge","g":"Legs","rm":"","record":"","how":"Heavier and slower - front shin vertical, torso tall, and drive through the whole foot to a full lockout."},{"name":"Leg Press","g":"Legs","rm":"","record":"","how":"Big brace before you unrack, controlled descent, and drive the hips and chest up together. Full depth with knees tracking the toes."},{"name":"Walking Lunges","g":"Legs","rm":"","record":"","how":"Go heavy for short distance. Squeeze the handles, brace the trunk, and walk tall without leaning away from the load."},{"name":"Good Mornings","g":"Legs","rm":"","record":"","how":"Wedge into the bar before you pull, brace hard, and keep it dragging up the legs. Push the floor away rather than lifting with the back."},{"name":"Barbell Bench Press","g":"Push","rm":"","record":"","how":"Shoulder blades pinned back and down, feet driving into the floor, bar to the same point every rep and press in a slight arc back over the shoulders."},{"name":"Barbell Bent-over Row","g":"Pull","rm":"","record":"","how":"Heavier load with a braced, fixed torso. Pull to the same point every rep and control the lowering."},{"name":"T-Bar Row","g":"Pull","rm":"","record":"","how":"Heavier load with a braced, fixed torso. Pull to the same point every rep and control the lowering."},{"name":"Single-arm DB Row","g":"Pull","rm":"","record":"","how":"Heavier load with a braced, fixed torso. Pull to the same point every rep and control the lowering."},{"name":"Landmine Anti-rotation Press","g":"Core","rm":"","record":"","how":"Slow it down and go heavier - resist the rotation as much as you create it, keeping the ribs locked to the pelvis."},{"name":"Russian Twist","g":"Core","rm":"","record":"","how":"Slow it down and go heavier - resist the rotation as much as you create it, keeping the ribs locked to the pelvis."},{"name":"Zercher Squat","g":"Full Body","rm":"","record":"","how":"Big brace before you unrack, controlled descent, and drive the hips and chest up together. Full depth with knees tracking the toes."},{"name":"Yoke Walk","g":"Full Body","rm":"","record":"","how":"Go heavy for short distance. Squeeze the handles, brace the trunk, and walk tall without leaning away from the load."},{"name":"Atlas Stone to Shoulder","g":"Full Body","rm":"","record":"","how":"Get tight to the stone, hips low, and grip around it. Lap it, reset your breath, then extend hard to the shoulder."},{"name":"Trap Bar Heavy Carry","g":"Full Body","rm":"","record":"","how":"Go heavy for short distance. Squeeze the handles, brace the trunk, and walk tall without leaning away from the load."},{"name":"Sled Drag","g":"Full Body","rm":"","record":"","how":"Load it heavy and grind - long powerful strides, full leg extension on each push."}],"HYPERTROPHY":[{"name":"Arnold Press","g":"Push","rm":"90","record":"60,50,40,30,20,10 × 5 × 5","how":"Control the lowering to the chin or lower, get a stretch at the bottom, and press without full lockout to keep the delts loaded."},{"name":"Barbell Overhead Press","g":"Push","rm":"115","record":"80,75,70,65,60,55 × 12 × 6","how":"Control the lowering to the chin or lower, get a stretch at the bottom, and press without full lockout to keep the delts loaded."},{"name":"Cable Single-Arm Behind-Body Lat Raise","g":"Push","rm":"15","record":"10,10,7.5,6,4.5,2.5 × 12 × 6","how":"Start with the cable behind the body for a deep stretch on the side delt, then raise slow and controlled to shoulder height."},{"name":"Close Grip Bench Press","g":"Push","rm":"170","record":"120,110,100,90,80,70 × 12 × 6","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Close Grip Cable Pressdowns","g":"Push","rm":"80","record":"57.5,50,42.5,35,30,25 × 12 × 6","how":"Get a deep stretch at the bottom (especially overhead variations), control the lowering, then lock out and squeeze."},{"name":"Dips","g":"Push","rm":"Body+30","record":"-20,-40,-60,-80,-100,-120 × 12 × 6","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Dumbbell Leaning Lateral Raise","g":"Push","rm":"45","record":"35,30,25,20,15,10 × 12 × 6","how":"Control the lowering to the chin or lower, get a stretch at the bottom, and press without full lockout to keep the delts loaded."},{"name":"Flat Barbell Bench Press","g":"Push","rm":"195","record":"145,125,105,85,65,45 × 12","how":"Lower over 3 seconds to a full stretch, brief pause, then press without locking out so the chest never gets a rest."},{"name":"Incline Dumbbell Press","g":"Push","rm":"110","record":"80,70,60,50,40,30 × 12 × 6","how":"30-45 degree bench. Lower over 3 seconds to a full stretch at the outer chest, then press without locking out."},{"name":"Low-to-High Cable Fly","g":"Push","rm":"24","record":"15,12.5,10,7.5,5,2.5 × 12 × 6","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Seated DB Overhead Shoulder Press","g":"Push","rm":"100","record":"70,60,50,40,30,20 × 12 × 6","how":"Control the lowering to the chin or lower, get a stretch at the bottom, and press without full lockout to keep the delts loaded."},{"name":"Overhead Cable Rope Triceps Extension","g":"Push","rm":"47.5","record":"35,32.5,30,27.5,25,22.5 × 12 × 6","how":"Use moderate load and control the lowering phase of each position to actually accumulate tension."},{"name":"Flat Dumbbell Bench Press","g":"Push","rm":"","record":"","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Dumbbell Fly","g":"Push","rm":"","record":"","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Straight Cable Fly","g":"Push","rm":"","record":"","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Landmine Press","g":"Push","rm":"","record":"","how":"Control the lowering to the chin or lower, get a stretch at the bottom, and press without full lockout to keep the delts loaded."},{"name":"Decline Dumbbell Press","g":"Push","rm":"","record":"","how":"Control down to the lower chest, pause in the stretch, then press up and squeeze the inner chest at the top."},{"name":"Cable Crossover Low-to-High","g":"Push","rm":"","record":"","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Cable Leaning Lateral Raise","g":"Push","rm":"","record":"","how":"Control the lowering to the chin or lower, get a stretch at the bottom, and press without full lockout to keep the delts loaded."},{"name":"Skull Crusher","g":"Push","rm":"","record":"","how":"Get a deep stretch at the bottom (especially overhead variations), control the lowering, then lock out and squeeze."},{"name":"Dumbbell Overhead Tricep Extension","g":"Push","rm":"","record":"","how":"Get a deep stretch at the bottom (especially overhead variations), control the lowering, then lock out and squeeze."},{"name":"Barbell Curls","g":"Pull","rm":"95","record":"75,70,65,60,55,50 × 12 × 6","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Barbell Row","g":"Pull","rm":"155","record":"105,95,85,75,65,55 × 12","how":"Full stretch at the front, pull to a hard squeeze between the shoulder blades, hold for a beat, then lower over 3 seconds."},{"name":"Face Pull","g":"Pull","rm":"42.5","record":"30,27.5,25,22.5,20,17.5 × 12 × 6","how":"Full stretch at the front, pull to a hard squeeze between the shoulder blades, hold for a beat, then lower over 3 seconds."},{"name":"Incline Dumbbell Curls","g":"Pull","rm":"80","record":"60,50,40,30,20,10 × 12 × 6","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Machine Rear Delt Flys","g":"Pull","rm":"120","record":"80,70,60,50,40,30 × 12 × 6","how":"Full stretch at the front, pull to a hard squeeze between the shoulder blades, hold for a beat, then lower over 3 seconds."},{"name":"Pull-Ups","g":"Pull","rm":"Body+30","record":"-100,-110,-120,-130,-140,-150 × 12 × 6","how":"Dead hang at the bottom, drive the elbows down to your ribs, squeeze the lats hard at the top, then take 3 seconds to lower."},{"name":"Single Arm Dumbbell Rows","g":"Pull","rm":"75","record":"55,50,45,40,35,30,25 × 12 × 6","how":"Full stretch at the front, pull to a hard squeeze between the shoulder blades, hold for a beat, then lower over 3 seconds."},{"name":"Standing Wide Grip EZ Bar Curl","g":"Pull","rm":"90","record":"60,55,50,45,40,35 × 12 × 6","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Weighted Chin-Ups","g":"Pull","rm":"Body+30","record":"-35,-50,-65,-80,-95,-110 × 12 × 6","how":"Full stretch at the top, drive the elbows to the ribs, squeeze the lats, then take 3 seconds to lower back to a dead hang."},{"name":"Wide Grip Cable Pulldown","g":"Pull","rm":"190","record":"130,120,110,100,90,80 × 12 × 6","how":"Full stretch at the top, drive the elbows to the ribs, squeeze the lats, then take 3 seconds to lower back to a dead hang."},{"name":"Straight Arm Pulldown","g":"Pull","rm":"","record":"","how":"Full stretch at the top, drive the elbows to the ribs, squeeze the lats, then take 3 seconds to lower back to a dead hang."},{"name":"Single-Arm Lat Pulldown","g":"Pull","rm":"","record":"","how":"Full stretch at the top, drive the elbows to the ribs, squeeze the lats, then take 3 seconds to lower back to a dead hang."},{"name":"Neutral Cable Row","g":"Pull","rm":"","record":"","how":"Full stretch at the front, pull to a hard squeeze between the shoulder blades, hold for a beat, then lower over 3 seconds."},{"name":"Meadows Row","g":"Pull","rm":"","record":"","how":"Full stretch at the front, pull to a hard squeeze between the shoulder blades, hold for a beat, then lower over 3 seconds."},{"name":"Reverse Pec Deck","g":"Pull","rm":"","record":"","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Wide Grip Cable Row","g":"Pull","rm":"","record":"","how":"Full stretch at the front, pull to a hard squeeze between the shoulder blades, hold for a beat, then lower over 3 seconds."},{"name":"Cable Curl","g":"Pull","rm":"","record":"","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Hammer Curl","g":"Pull","rm":"","record":"","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Spider Curl","g":"Pull","rm":"","record":"","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Preacher Curl","g":"Pull","rm":"","record":"","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Dumbbell Shrug","g":"Pull","rm":"","record":"","how":"Pause and squeeze for a full second at the top, then lower slowly into a deliberate stretch."},{"name":"Cable Shrug","g":"Pull","rm":"","record":"","how":"Pause and squeeze for a full second at the top, then lower slowly into a deliberate stretch."},{"name":"Rack Pull","g":"Pull","rm":"","record":"","how":"Slow 3-second lowering, push the hips back to a deep hamstring stretch, and stop just short of lockout to keep tension on."},{"name":"Bulgarian Split Squat","g":"Legs","rm":"130","record":"80,70,60,50,45,45 × 12","how":"Deep range with a 3-second lowering, stretch the front leg fully at the bottom, and stay slightly forward to load the glute."},{"name":"Dumbbell Romanian Deadlift","g":"Legs","rm":"180","record":"120,110,100,90,80,70 × 12 × 6","how":"Slow 3-second lowering, push the hips back to a deep hamstring stretch, and stop just short of lockout to keep tension on."},{"name":"Feet Low & Narrow Leg Press","g":"Legs","rm":"360","record":"260,230,200,170,140,110 × 12 × 6","how":"3-second descent into a deep stretch, brief pause, then control back up - stay in the range where the quads keep tension."},{"name":"Front Squat","g":"Legs","rm":"225","record":"155,140,125,110,95,80 × 12 × 6","how":"3-second descent into a deep stretch, brief pause, then control back up - stay in the range where the quads keep tension."},{"name":"Hack Squat","g":"Legs","rm":"190","record":"135,125,115,105,95,85 × 12 × 6","how":"3-second descent into a deep stretch, brief pause, then control back up - stay in the range where the quads keep tension."},{"name":"High Bar Back Squat","g":"Legs","rm":"220","record":"185,165,145,125,105,85 × 10","how":"3-second descent into a deep stretch, brief pause, then control back up - stay in the range where the quads keep tension."},{"name":"Hip Thrust","g":"Legs","rm":"165","record":"115,105,95,85,75,65 × 5 × 5","how":"Slow 3-second lowering, push the hips back to a deep hamstring stretch, and stop just short of lockout to keep tension on."},{"name":"Leg Extensions","g":"Legs","rm":"205","record":"145,130,115,100,85,70 × 12 × 6","how":"This is where it shines - slow eccentric, full range, and a hard 1-second squeeze at peak contraction each rep."},{"name":"Nordic Hamstring Curl","g":"Legs","rm":"Body","record":"Push Assisted × 12 × 6","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Single Leg Calf Raise","g":"Legs","rm":"120","record":"80,80,60,60,40,40 × 12 × 6","how":"Slow 3-second lowering into a deep stretch, pause at the bottom, then squeeze hard at the top. Calves need the stretch."},{"name":"Single Leg Curls","g":"Legs","rm":"70","record":"50,45,40,35,30,25 × 12 × 6","how":"Slow the eccentric to 3 seconds and get a full stretch at the bottom. Squeeze hard at the top and do not let the elbows drift forward."},{"name":"Seated Calf Raises","g":"Legs","rm":"","record":"","how":"Slow 3-second lowering into a deep stretch, pause at the bottom, then squeeze hard at the top. Calves need the stretch."},{"name":"Barbell Romanian Deadlift","g":"Legs","rm":"","record":"","how":"Slow 3-second lowering, push the hips back to a deep hamstring stretch, and stop just short of lockout to keep tension on."},{"name":"Sumo Deadlift","g":"Legs","rm":"","record":"","how":"Slow 3-second lowering, push the hips back to a deep hamstring stretch, and stop just short of lockout to keep tension on."},{"name":"Cable Pull-Through","g":"Legs","rm":"","record":"","how":"Slow 3-second lowering, push the hips back to a deep hamstring stretch, and stop just short of lockout to keep tension on."},{"name":"Glute-Ham Raise","g":"Legs","rm":"","record":"","how":"Slow 3-second lowering, push the hips back to a deep hamstring stretch, and stop just short of lockout to keep tension on."},{"name":"Cable Hip Adduction","g":"Legs","rm":"","record":"","how":"Full stretch out to the side, then pull the leg across the midline and squeeze the inner thigh for a beat."},{"name":"Cable Hip Abduction","g":"Legs","rm":"","record":"","how":"Keep the torso still and drive the leg out and slightly back, squeezing the glute at end range for a full second."},{"name":"Sumo Squat","g":"Legs","rm":"","record":"","how":"3-second descent into a deep stretch, brief pause, then control back up - stay in the range where the quads keep tension."},{"name":"Donkey Calf Raises","g":"Legs","rm":"","record":"","how":"Slow 3-second lowering into a deep stretch, pause at the bottom, then squeeze hard at the top. Calves need the stretch."},{"name":"Goblet Squat","g":"Legs","rm":"","record":"","how":"3-second descent into a deep stretch, brief pause, then control back up - stay in the range where the quads keep tension."},{"name":"Step-ups","g":"Legs","rm":"","record":"","how":"Deep range with a 3-second lowering, stretch the front leg fully at the bottom, and stay slightly forward to load the glute."},{"name":"Seated Dumbbell Shoulder Press","g":"Push","rm":"","record":"","how":"Control the lowering to the chin or lower, get a stretch at the bottom, and press without full lockout to keep the delts loaded."},{"name":"Machine Chest Press","g":"Push","rm":"","record":"","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."},{"name":"Overhead Triceps Extension","g":"Push","rm":"","record":"","how":"Get a deep stretch at the bottom (especially overhead variations), control the lowering, then lock out and squeeze."},{"name":"Pushdown","g":"Push","rm":"","record":"","how":"Get a deep stretch at the bottom (especially overhead variations), control the lowering, then lock out and squeeze."},{"name":"Chest-supported Row","g":"Pull","rm":"","record":"","how":"Add these at the end of a set - hold the stretched position to extend time under tension."},{"name":"DB Pullover","g":"Pull","rm":"","record":"","how":"Full stretch at the top, drive the elbows to the ribs, squeeze the lats, then take 3 seconds to lower back to a dead hang."},{"name":"Cable Crunch","g":"Core","rm":"","record":"","how":"Slow the lowering to 3 seconds and crunch the ribs toward the pelvis at the top - abs grow from tension, not momentum."},{"name":"Hanging Knee Raise","g":"Core","rm":"","record":"","how":"Slow the lowering to 3 seconds and crunch the ribs toward the pelvis at the top - abs grow from tension, not momentum."},{"name":"Decline Sit-up","g":"Core","rm":"","record":"","how":"Slow the lowering to 3 seconds and crunch the ribs toward the pelvis at the top - abs grow from tension, not momentum."},{"name":"Landmine Rotation","g":"Core","rm":"","record":"","how":"Controlled tempo through a full arc with a squeeze at end range - obliques respond well to time under tension."},{"name":"Ab Wheel Rollout","g":"Core","rm":"","record":"","how":"Slow controlled roll out and back with the abs braced the entire time - never let the hips sag."},{"name":"Kettlebell","g":"Full Body","rm":"","record":"","how":"Run a kettlebell complex - chain 3-4 movements without setting the bell down and control every lowering phase."},{"name":"Devil's Press","g":"Full Body","rm":"","record":"","how":"Use moderate load and control the lowering phase of each position to actually accumulate tension."},{"name":"Man-maker","g":"Full Body","rm":"","record":"","how":"Renegade row each side, then a clean to a press. Control the lowering on every position instead of rushing the sequence."},{"name":"Turkish Get-up","g":"Full Body","rm":"","record":"","how":"Use moderate load and control the lowering phase of each position to actually accumulate tension."},{"name":"Pec Deck","g":"Push","rm":"","record":"","how":"3-second lowering into a full chest stretch, brief pause, then press without locking out to keep constant tension."}],"ENDURANCE":[{"name":"Push Up","g":"Push","rm":"Body+50","record":"Body × 22,20,18,16 × 4","how":"Full range every rep - chest to the floor, full lockout at the top. Keep a straight line from head to heels as you fatigue."},{"name":"Dips","g":"Push","rm":"Body+30","record":"-120 × 30,28,26,24 × 4","how":"Moderate load with continuous smooth reps. Keep the shoulders packed and breathe on a rhythm."},{"name":"Incline Push Ups","g":"Push","rm":"Level Body+30","record":"Biggest Box Incline × 30,28,26,24 × 4","how":"Moderate load with continuous smooth reps. Keep the shoulders packed and breathe on a rhythm."},{"name":"Dumbbell Shoulder Press","g":"Push","rm":"100","record":"20 × 30,28,26,24 × 4","how":"Lighter load with a smooth rhythm - keep the ribs down and don't let the low back arch as fatigue builds."},{"name":"Dive Bomber Push-Up","g":"Push","rm":"Body+20","record":"Body × 16,14,12,10 × 4","how":"Moderate load with continuous smooth reps. Keep the shoulders packed and breathe on a rhythm."},{"name":"Pike Push-Up","g":"Push","rm":"","record":"","how":"Lighter load with a smooth rhythm - keep the ribs down and don't let the low back arch as fatigue builds."},{"name":"Dumbbell Bench Press","g":"Push","rm":"","record":"","how":"Moderate load with continuous smooth reps. Keep the shoulders packed and breathe on a rhythm."},{"name":"Landmine Press","g":"Push","rm":"","record":"","how":"Lighter load with a smooth rhythm - keep the ribs down and don't let the low back arch as fatigue builds."},{"name":"Cable Chest Press","g":"Push","rm":"","record":"","how":"Moderate load with continuous smooth reps. Keep the shoulders packed and breathe on a rhythm."},{"name":"Arnold Press","g":"Push","rm":"","record":"","how":"Lighter load with a smooth rhythm - keep the ribs down and don't let the low back arch as fatigue builds."},{"name":"Kettlebell Press","g":"Push","rm":"","record":"","how":"Lighter load with a smooth rhythm - keep the ribs down and don't let the low back arch as fatigue builds."},{"name":"Band Rows","g":"Pull","rm":"Black Band","record":"Yellow Band × 30,28,26,24 × 4","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Cable Curl","g":"Pull","rm":"65","record":"32.5 × 22,20,18,16 × 4","how":"Light load, continuous tension, and no rest at the bottom - work to a real burn."},{"name":"Close-Grip V-Bar Cable Row","g":"Pull","rm":"180","record":"85 × 30,28,26,24 × 4","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Dumbbell Bent-Over Rows","g":"Pull","rm":"120","record":"60 × 30,28,26,26 × 4","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Inverted Rows","g":"Pull","rm":"Height 3","record":"Height 8 × 22,20,18,16 × 4","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Neutral Grip Cable Row","g":"Pull","rm":"180","record":"85 × 28,26,24,22 × 4","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Neutral Grip Lat Pulldown","g":"Pull","rm":"200","record":"80 × 24,22,20,18 × 4","how":"Lighter or assisted, higher reps, and keep the shoulders packed - stop before form breaks into a swing."},{"name":"Wide Grip Cable Row","g":"Pull","rm":"180","record":"85 × 30,28,26,24 × 4","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Renegade Rows","g":"Pull","rm":"","record":"","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Plate Pinch Carries","g":"Pull","rm":"","record":"","how":"Lighter load, longer laps. Keep the breathing steady and the shoulders packed as the grip fades."},{"name":"Face Pull","g":"Pull","rm":"","record":"","how":"Lighter load, continuous tension, and steady breathing - don't let the torso start swinging to cheat reps."},{"name":"Band Pull Apart","g":"Pull","rm":"","record":"","how":"Arms straight, pull the band apart to touch your chest, squeeze the rear delts, and keep continuous tension for high reps."},{"name":"Bicycle Crunches","g":"Core","rm":"Body+30","record":"Body × 100,80,60,40 × 4","how":"High reps at a steady pace with continuous tension - keep the low back flat against the floor."},{"name":"Dead Bugs","g":"Core","rm":"5 Each Limb","record":"Body × 30,28,26,24 × 4","how":"Longer, lighter holds. Breathe shallow but continuously and keep alignment as the shake sets in."},{"name":"Farmers Carry","g":"Core","rm":"110","record":"55 × 10,8,6,4 laps × 4","how":"Lighter load, longer laps. Keep the breathing steady and the shoulders packed as the grip fades."},{"name":"Front Rack Carries","g":"Core","rm":"80 × 1 Lap","record":"40 × 5,4,3,2 laps × 4","how":"Lighter load, longer laps. Keep the breathing steady and the shoulders packed as the grip fades."},{"name":"Hanging Knee Raises","g":"Core","rm":"Body+20","record":"Body × 28,25,22,19 × 4","how":"High reps at a steady pace with continuous tension - keep the low back flat against the floor."},{"name":"Plank","g":"Core","rm":"120 × 5sec","record":"Body × 60,55,50,50 hip swivels × 4","how":"Longer, lighter holds. Breathe shallow but continuously and keep alignment as the shake sets in."},{"name":"Russian Twists","g":"Core","rm":"90","record":"45 × 30,28,26,24 × 4","how":"Lighter load, steady rhythm, and keep the movement coming from the trunk rather than the arms."},{"name":"Side Plank Hip Dips","g":"Core","rm":"Body+50","record":"Body × 40,37,34,33 × 4","how":"Longer, lighter holds. Breathe shallow but continuously and keep alignment as the shake sets in."},{"name":"Pallof Press Repeats","g":"Core","rm":"","record":"","how":"Lighter load with steady reps - keep the hips square and breathe through the effort."},{"name":"Long-Lever Plank","g":"Core","rm":"","record":"","how":"Longer, lighter holds. Breathe shallow but continuously and keep alignment as the shake sets in."},{"name":"Bird Dog","g":"Core","rm":"","record":"","how":"Extend opposite arm and leg slowly without letting the hips rotate - move at a steady tempo and pause briefly at full extension."},{"name":"Cable Woodchop","g":"Core","rm":"","record":"","how":"Keep the ground contacts quick and quiet, cut range slightly as you tire, and stop before landings get sloppy."},{"name":"Landmine Rotation","g":"Core","rm":"","record":"","how":"Lighter load, steady rhythm, and keep the movement coming from the trunk rather than the arms."},{"name":"Med Ball Rotation Throw","g":"Core","rm":"","record":"","how":"Lighter ball, steady rhythm, keep the sequence clean and let the pace do the work."},{"name":"Back Extension","g":"Core","rm":"","record":"","how":"Lighter load with a smooth hinge - never round out, and reset your brace every few reps."},{"name":"Supermans","g":"Core","rm":"","record":"","how":"Longer, lighter holds. Breathe shallow but continuously and keep alignment as the shake sets in."},{"name":"GHD Back Extension","g":"Core","rm":"","record":"","how":"Lighter load with a smooth hinge - never round out, and reset your brace every few reps."},{"name":"Goblet Squats","g":"Legs","rm":"100","record":"50 × 30,28,26,24 × 4","how":"Moderate load with continuous smooth reps. Keep depth honest and breathe at the top rather than holding your breath."},{"name":"Walking Lunges","g":"Legs","rm":"110","record":"50 × 15,14,13,12 × 4","how":"Lighter load, longer laps. Keep the breathing steady and the shoulders packed as the grip fades."},{"name":"Single Leg Calf Raise","g":"Legs","rm":"120","record":"60 × 30,28,26,24 × 4","how":"High reps to genuine burn - full range, steady tempo, no bouncing off the bottom."},{"name":"Step Ups","g":"Legs","rm":"110","record":"50 × 22,20,18,16 × 4","how":"Steady pace, controlled steps, and full range. Alternate legs smoothly and keep the trunk upright as you tire."},{"name":"Low Bar Back Squat","g":"Legs","rm":"240","record":"120 × 20,18,16,14 × 4","how":"Moderate load with continuous smooth reps. Keep depth honest and breathe at the top rather than holding your breath."},{"name":"Barbell Squat","g":"Legs","rm":"","record":"","how":"Moderate load with continuous smooth reps. Keep depth honest and breathe at the top rather than holding your breath."},{"name":"Leg Press","g":"Legs","rm":"","record":"","how":"Moderate load with continuous smooth reps. Keep depth honest and breathe at the top rather than holding your breath."},{"name":"Romanian Deadlift","g":"Legs","rm":"","record":"","how":"Lighter load with a smooth hinge - never round out, and reset your brace every few reps."},{"name":"Hip Thrust","g":"Legs","rm":"","record":"","how":"Lighter load with a smooth hinge - never round out, and reset your brace every few reps."},{"name":"Good Mornings","g":"Legs","rm":"","record":"","how":"Lighter load with a smooth hinge - never round out, and reset your brace every few reps."},{"name":"Bulgarian Split Squat","g":"Legs","rm":"","record":"","how":"Steady pace, controlled steps, and full range. Alternate legs smoothly and keep the trunk upright as you tire."},{"name":"Reverse Lunge","g":"Legs","rm":"","record":"","how":"Steady pace, controlled steps, and full range. Alternate legs smoothly and keep the trunk upright as you tire."},{"name":"Single Leg Romanian Deadlift","g":"Legs","rm":"","record":"","how":"Lighter load with a smooth hinge - never round out, and reset your brace every few reps."},{"name":"Tibialis Raises","g":"Legs","rm":"","record":"","how":"High reps to genuine burn - full range, steady tempo, no bouncing off the bottom."},{"name":"Sled Push","g":"Legs","rm":"","record":"","how":"Moderate load, continuous work, steady breathing. Great conditioning with minimal soreness."},{"name":"Kettlebell Swings","g":"Full Body","rm":"50","record":"25 × 30,28,26,24","how":"Find a breathing rhythm - exhale sharply on every snap, and keep the hinge crisp rather than squatting the reps."},{"name":"Burpees","g":"Full Body","rm":"Body+20","record":"Body × 18,16,14,12 × 4","how":"Settle into a sustainable pace you can hold for the whole set. Breathe on a rhythm and keep transitions smooth."},{"name":"Turkish Get-Ups","g":"Full Body","rm":"45","record":"20 × 16,14,12,10 × 4","how":"Settle into a sustainable pace you can hold for the whole set. Breathe on a rhythm and keep transitions smooth."},{"name":"Man Makers","g":"Full Body","rm":"","record":"","how":"Settle into a sustainable pace you can hold for the whole set. Breathe on a rhythm and keep transitions smooth."},{"name":"Sled Drag and Push","g":"Legs","rm":"","record":"","how":"Moderate load, continuous work, steady breathing. Great conditioning with minimal soreness."},{"name":"Squats","g":"Legs","rm":"","record":"","how":"Moderate load with continuous smooth reps. Keep depth honest and breathe at the top rather than holding your breath."},{"name":"Band Presses","g":"Push","rm":"","record":"","how":"Moderate load with continuous smooth reps. Keep the shoulders packed and breathe on a rhythm."},{"name":"DB Floor Press","g":"Push","rm":"","record":"","how":"Moderate load with continuous smooth reps. Keep the shoulders packed and breathe on a rhythm."},{"name":"Flutter Kicks","g":"Core","rm":"","record":"","how":"High reps at a steady pace with continuous tension - keep the low back flat against the floor."},{"name":"Mountain Climbers","g":"Core","rm":"","record":"","how":"Settle into a sustainable pace you can hold for the whole set. Breathe on a rhythm and keep transitions smooth."},{"name":"Sit-ups","g":"Core","rm":"","record":"","how":"High reps at a steady pace with continuous tension - keep the low back flat against the floor."},{"name":"Hollow Body Rocks","g":"Core","rm":"","record":"","how":"Longer, lighter holds. Breathe shallow but continuously and keep alignment as the shake sets in."},{"name":"Standing Cable Crunches","g":"Core","rm":"","record":"","how":"High reps at a steady pace with continuous tension - keep the low back flat against the floor."}],"ISOMETRIC":[{"name":"Dumbbell Bench Press Hold","g":"Push","rm":"195","record":"165 × 20sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Planche Lean","g":"Push","rm":"Body+25","record":"Body × 20sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Dip Hold","g":"Push","rm":"Body+30","record":"Body × 25sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Bench DB Shoulder Press Hold","g":"Push","rm":"110","record":"90 × 15sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Mid Range Push Up Hold","g":"Push","rm":"Body+45","record":"Body+35 × 20sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Wall Handstand Hold","g":"Push","rm":"Body+20","record":"Body × 25sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Dumbbell Incline Bench Press Hold","g":"Push","rm":"110","record":"100 × 20sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Ring Top Support Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Z Press Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Planche Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Pin Press Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Wall Press Chest Squeeze","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Active Hang","g":"Pull","rm":"Body+35","record":"Body × 12sec × 4","how":"Shoulders down and back, ribs pulled in, and squeeze the bar as if trying to bend it."},{"name":"Chest Supported Row Hold","g":"Pull","rm":"140","record":"120 × 20sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Curl Hold","g":"Pull","rm":"45","record":"40 × 15sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Dead Hang","g":"Pull","rm":"Body+30","record":"Body × 10sec","how":"Shoulders active and packed down, ribs pulled in, and crush the bar. Don't let the shoulders creep up to your ears."},{"name":"Flexed-Arm Hang Chin Up","g":"Pull","rm":"Body+20","record":"Body × 15sec × 4","how":"Shoulders down and back, ribs pulled in, and squeeze the bar as if trying to bend it."},{"name":"Flexed-Arm Hang Pull Up","g":"Pull","rm":"Body+30","record":"Body × 20sec × 4","how":"Shoulders down and back, ribs pulled in, and squeeze the bar as if trying to bend it."},{"name":"Neutral Grip Cable Row Hold","g":"Pull","rm":"180","record":"160 × 10sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Front Lever Hold","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Lat Pull Down Hold","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Towel Bar Pull Hold","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Band Pull Apart Hold","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Pinch Grip Hang","g":"Pull","rm":"","record":"","how":"Shoulders down and back, ribs pulled in, and squeeze the bar as if trying to bend it."},{"name":"Towel Hang","g":"Pull","rm":"","record":"","how":"Shoulders down and back, ribs pulled in, and squeeze the bar as if trying to bend it."},{"name":"Ab Wheel Rollout","g":"Core","rm":"Level With Floor","record":"Deep Rollout × 20sec","how":"Roll out to the hardest position you can hold and freeze there with the ribs pulled down."},{"name":"Front Lever","g":"Core","rm":"Body+10","record":"Body × 10sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Hollow Body Hold","g":"Core","rm":"Body+50","record":"Body+40 × 10sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Kneeling Pallof Press Hold","g":"Core","rm":"25","record":"20 × 30sec","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"L Sit","g":"Core","rm":"Body+25","record":"Body × 30sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Landmine Rotation Hold","g":"Core","rm":"55","record":"50 × 10sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"RKC Plank","g":"Core","rm":"Body+30","record":"Body × 35sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Side Plank","g":"Core","rm":"Body+50","record":"Body × 45sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Human Flag","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Plank","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Dragon Flag","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Copenhagen Plank","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Single-Arm Farmer Carry Pause","g":"Core","rm":"","record":"","how":"Just stand and hold - fight the pull without moving, ribs down and shoulders locked in place."},{"name":"Suitcase Deadlift Hold","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"One-Arm Overhead Hold","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Superman Hold","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"GHD Back Extension Hold","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Long-Lever Plank","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Bulgarian Split Squat Hold","g":"Legs","rm":"130","record":"110 × 15sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Calf Raise Top Hold","g":"Legs","rm":"180","record":"160 × 20sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Deadlift Hold","g":"Legs","rm":"235","record":"210 × 10sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Glute Bridge Hold","g":"Legs","rm":"100","record":"90 × 50sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Romanian Deadlift Hold","g":"Legs","rm":"225","record":"200 × 10sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Spanish Squat Hold","g":"Legs","rm":"45","record":"35 × 10sec × 4","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Wall Sit","g":"Legs","rm":"125","record":"80 × 20sec × 5","how":"Thighs at exactly parallel, back flat to the wall, weight in the heels. Push the knees out and breathe steadily through the burn."},{"name":"Sissy Squat Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Leg Extension Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Hip Thrust Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Nordic Curl Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Single-Leg Hip Hinge Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Static Lunge Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Single-leg RDL Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Squat against Safety Pins","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Rack Pull Hold","g":"Legs","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Plank Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Wall Press Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Bench Press Pin Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Overhead Press Lockout Hold","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Bench Press into Pins","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Overhead Press into Pins","g":"Push","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Isometric Row Hold","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Deadlift Lockout Hold","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Farmer's Carry Hold","g":"Pull","rm":"","record":"","how":"Just stand and hold - fight the pull without moving, ribs down and shoulders locked in place."},{"name":"Deadlift into Pins","g":"Pull","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Row into a Fixed Strap","g":"Pull","rm":"","record":"","how":"Hold the bar or handle at your torso with the shoulder blades fully retracted and squeeze."},{"name":"Dead Bug Hold","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Plank Max Forearm-to-floor","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Isometric Anti-rotation Press into a Fixed Point","g":"Core","rm":"","record":"","how":"Hold at the fully rotated end range and resist being pulled back to centre."},{"name":"Back Extension into Pins","g":"Core","rm":"","record":"","how":"This is the main event: find the hardest angle, brace everything, and push into it maximally without any movement."},{"name":"Front-Rack Hold","g":"Full Body","rm":"","record":"","how":"Bar racked on the front delts with elbows driven high and ribs pulled down. Stand tall and breathe shallow - the trunk and upper back give out well before the legs."},{"name":"Zercher Hold","g":"Full Body","rm":"","record":"","how":"Bar in the crooks of the elbows, chest up, hips stacked under the ribs. Squeeze the arms together and fight the forward pull rather than leaning back."},{"name":"Bear Hold","g":"Full Body","rm":"","record":"","how":"Quadruped with the knees hovering an inch off the floor. Flat back, ribs down, weight spread evenly across all four points - do not let the hips drift up."},{"name":"Heavy Stone Hug Hold","g":"Full Body","rm":"","record":"","how":"Wrap the arms fully around the stone and crush it into the chest. Set your brace before you lift it, and keep the hips under the load."},{"name":"Isometric Mid-Thigh Pull","g":"Full Body","rm":"","record":"","how":"Bar pinned at mid-thigh in the rack. Chest up, lats tight, then build tension to maximum over 2-3 seconds and pull against the immovable bar."},{"name":"Zercher Hold against Pins","g":"Full Body","rm":"","record":"","how":"Bar in the elbow crooks driving up into fixed pins. Push maximally with nothing moving, keeping the torso vertical and the elbows tight to the body."},{"name":"Static Sled Push into Wall","g":"Full Body","rm":"","record":"","how":"Sled loaded against the wall, body low in the drive position. Push as though trying to extend the legs fully - all tension, zero movement."}]};
+const CARDIO = [{"name":"Treadmill Running","g":"Cardio","rm":"","record":"2.75 mi · 29:48","how":"Land under your hips with a quick cadence around 170-180 steps/min. Keep the shoulders loose and breathe on a rhythm rather than chasing pace."},{"name":"Stairs","g":"Cardio","rm":"","record":"1000 ft · 20:48","how":"Drive through the whole foot and stand tall - resist leaning on the rails. Push from the glutes, not just the quads."},{"name":"Biking","g":"Cardio","rm":"","record":"6 mi","how":"Keep cadence around 80-90 rpm and let resistance, not flailing legs, set the effort. Smooth circles through the whole pedal stroke."},{"name":"Elliptical","g":"Cardio","rm":"","record":"3 mi · 27:59","how":"Stay upright off the handles and drive through the heels. Keep the stride long and even rather than bouncing."},{"name":"Multidirectional Treadmill","g":"Cardio","rm":"","record":"1.5@8, 2.5@8, 3.5@8, 4@0, 4.5@0, 4.5@0, 5@0, 5@0, 4@0, 3.5@0, 3@0 · 1.65 mi in 30:10","how":"Change direction only at the belt speeds you can control. Stay low in an athletic stance on the lateral segments and keep the feet quiet."},{"name":"Barefoot Outdoor Running","g":"Cardio","rm":"","record":"2.51 mi · 30:06","how":"Shorten the stride and increase cadence - barefoot punishes heel striking. Build volume slowly; calves and feet need time to adapt."},{"name":"Bag & Rope Work","g":"Cardio","rm":"","record":"Punching Bag: 150, 120, 90, 60, 30 · Speed Bag: 1:00 · Line Jumps: 100, 80, 60, 40, 20 · Ropes: 125, 100, 75, 50, 25","how":"Rotate through the four in order without long breaks. On the bag, punch from the hips and return the hand straight home; on ropes, keep the hips loaded and the waves even."}];
+const FOCUS = {"CHEST":[{"name":"Incline Bench Press","rm":"155","record":"120,110,100,90,80,70","how":"30-45 degree bench. Lower over 3 seconds to a full stretch at the upper chest, pause briefly, then press without locking out to keep tension."},{"name":"Bench Press","rm":"195","record":"145,135,125,115,105,95","how":"Shoulder blades pinned, feet driving, bar to the same touch point. Control the descent and press in a slight arc back over the shoulders."},{"name":"Dips","rm":"Body+30","record":"-15,-30,-45,-60,-75,-90","how":"Lean the torso forward to bias the chest, upright to bias triceps. Lower to a deep stretch, then press to a full lockout."}],"FOREARM":[{"name":"Grip Crushers (Silver)","g":"Forearm","rm":"","record":"150,120,90,60,30","how":"Set the gripper deep in the palm, crush to a full close, and control it back open. Don't let the wrist bend."},{"name":"Grip Crushers (Black)","g":"Forearm","rm":"","record":"180,144,108,72,36","how":"Set the gripper deep in the palm, crush to a full close, and control it back open. Don't let the wrist bend."},{"name":"Reverse Grip Crushers (Silver)","g":"Forearm","rm":"","record":"200,160,120,80,40","how":"Open-hand extension against the gripper - control the close and the release, and keep the wrist neutral."},{"name":"Reverse Grip Crushers (Black)","g":"Forearm","rm":"","record":"200,160,120,80,40","how":"Open-hand extension against the gripper - control the close and the release, and keep the wrist neutral."},{"name":"Wrist Curl (Strength)","g":"Forearm","rm":"","record":"40 × 5 × 5","how":"Heaviest resistance you can fully close. Squeeze to complete lockout, hold a beat, then control the release."},{"name":"Wrist Curl (Hypertrophy)","g":"Forearm","rm":"","record":"35,30,25,20,15,10 × 12 × 6","how":"Full range with a slow release, chasing the burn through the forearm belly."},{"name":"Wrist Curl (Endurance)","g":"Forearm","rm":"","record":"20 × 30,28,26,24 × 4","how":"Lighter resistance, high reps to genuine failure, keeping the range full the whole way."},{"name":"Reverse Wrist Curl (Strength)","g":"Forearm","rm":"","record":"25 × 5 × 5","how":"Heaviest resistance you can fully close. Squeeze to complete lockout, hold a beat, then control the release."},{"name":"Reverse Wrist Curl (Hypertrophy)","g":"Forearm","rm":"","record":"25,20,15,10,5,5 × 12 × 6","how":"Full range with a slow release, chasing the burn through the forearm belly."},{"name":"Reverse Wrist Curl (Endurance)","g":"Forearm","rm":"","record":"15 × 24,22,20,18 × 4","how":"Lighter resistance, high reps to genuine failure, keeping the range full the whole way."},{"name":"Wrist Twist (Strength)","g":"Forearm","rm":"","record":"30 × 5 × 5","how":"Heaviest resistance you can fully close. Squeeze to complete lockout, hold a beat, then control the release."},{"name":"Wrist Twist (Hypertrophy)","g":"Forearm","rm":"","record":"25,25,20,20,15,15 × 12 × 6","how":"Full range with a slow release, chasing the burn through the forearm belly."},{"name":"Wrist Twist (Endurance)","g":"Forearm","rm":"","record":"10 × 30,28,26,24 × 4","how":"Lighter resistance, high reps to genuine failure, keeping the range full the whole way."},{"name":"Finger Rolls (Strength)","g":"Forearm","rm":"","record":"97.5 × 5 × 5","how":"Heaviest resistance you can fully close. Squeeze to complete lockout, hold a beat, then control the release."},{"name":"Finger Rolls (Hypertrophy)","g":"Forearm","rm":"","record":"67.5,62.5,57.5,52.5,47.5,42.5 × 12 × 6","how":"Full range with a slow release, chasing the burn through the forearm belly."},{"name":"Finger Rolls (Endurance)","g":"Forearm","rm":"","record":"47.5 × 30,28,26,24 × 4","how":"Lighter resistance, high reps to genuine failure, keeping the range full the whole way."}],"BAND":[{"name":"Green Band Finger Stretches","g":"Band","rm":"","record":"220,176,132,88,44","how":"Open the fingers against the band through a full range and control the return - never let it snap shut."},{"name":"Blue Band Finger Stretches","g":"Band","rm":"","record":"150,120,90,60,30","how":"Open the fingers against the band through a full range and control the return - never let it snap shut."},{"name":"Red Band Finger Stretches","g":"Band","rm":"","record":"120,96,72,48,24","how":"Open the fingers against the band through a full range and control the return - never let it snap shut."}]};
+const MOBILITY = [{"name":"Yoga Flow","g":"Yoga","rm":"","record":"30 min","sequence":["Hang Stretch","RTX Hang Back Stretch","RTX Hang Forward Stretch","Chair Twist","Calf Stretch Out","Hamstring Stretch","Side Hamstring Stretch","Behind Arm Stretch Down","Behind Arm Stretch Middle","Behind Arm Stretch Up","Arm Up Stretch","Behind Bent Arm Stretch","Behind Open Palm Arm Stretch","Anjaneyasana/Crescent Moon Pose","Lean Back Stretch","Virabhadrasana I/Warrior One","Virabhadrasana II/Warrior Two","Trikonasana/Triangle Pose","Reverse Triangle Pose","Virabhadrasana III/Warrior Three","Ardha Chandrasana/Half Moon Pose","Vrikshasana/Tree Pose","Tadasana/Mountain Pose","Arms Up Lean Forward Stretch","Arms Up Lean Backward Stretch","Shoulder Flossing Over Head","Shoulder Flossing Behind Back","Cross Arm Stretch","Garudasana/Eagle Pose","Uttanasana/Standing Forward Bend","Crossed Leg Standing Forward Bend","Utkatasana/Chair Pose","Malasana/Garland Pose","Strap Hamstring Stretch","Sukhasana/Easy Pose","Neck Stretches","Meru Vakrasana/Spinal Twist Pose","Parsva Sukhasana/Seated Side Bend","Paschimottanasana/Seated Forward Bend","Baddha Konasana/Butterfly Pose","Gomukhasana/Cow Face Pose","Navasana/Boat Pose","Apanasana/Knees-to-Chest Pose","Knee to Chest Separate Leg Stretch","Ananda Balasana/Happy Baby Pose","Matsyasana/Fish Pose","Block Chest Opener","Laying Spinal Twist","Reversed Laying Spinal Twist","Chakrasanalsana/Bridge Pose","Ardha Purvottanasana/Reverse Table Top Pose","Chakrasana/Wheel Pose","Foot Sit Toes","Foot Sit Feet","Ustrasana/Camel Pose","Virasana/Hero's Pose","Parighasana/Gate Pose","Wrist Bend Forward","Wrist Bend Backward","Wrist Circles Clockwise","Wrist Circles Counterclockwise","Bidalasana/Cat Pose","Bitilasana/Cow Pose","Parsva Balasana/Thread The Needle Pose","Bhekasana/Frog Pose","Salamba Bhujangasana/Sphinx Pose","Bhujangasana/Cobra Pose","Urdhva Mukha Svanasana/Upward Facing Dog Pose","Balasana/Child's Pose","Uttana Shishosana/Puppy Pose","Adho Mukha Svanasana/Downward Dog Pose","Ardha Pincha Mayurasana/Dolphin Pose","Phalakasana/Plank Pose","Vasisthasana/Side Plank Pose","Chaturanga Dandasana/Four-Limbed Staff Pose","Utthan Pristhasana/Lizard Pose","Kapotasana/Pigeon Pose","Eka Pada Rajakapotasana/King Pigeon Pose","Salabhasana/Locust Pose","Dhanurasana/Bow Pose","Bakasana/Crow Pose","Tittibhasana/Firefly Pose","Astavakrasana/8 Angle Pose","Head Stand","Hand Stand"],"how":"Move on the breath, one pose per inhale or exhale. Hold anything that feels tight for a few extra breaths rather than forcing depth."},{"name":"PNF Stretches","g":"PNF","rm":"","record":"Sitting Fold, Kneeling Quad and Hip Flexors Stretch, Hamstring Pull Back, Standing Calf Stretch, Chest Wall Stretch, Hanging Scapular Lat Stretch, Bicep Table Stretch, Tricep Behind Back Towel Stretch, Wall Wrist Stretch, Reverse Wall Wrist Stretch","how":"Contract into the stretch for 5-6 seconds at about 75% effort, relax fully, then ease deeper on the exhale. Three rounds per position."},{"name":"Pilates Class","g":"Pilates","rm":"","record":"30 min","how":"Keep the ribs down and the deep abs engaged throughout. Precision and control beat range of motion every time."},{"name":"Foam, Balance & Rope","g":"Recovery","rm":"","record":"Foam Roll: Calf, Hamstring, Glutes, Low Back, Mid Back, High Back, Shoulder Blades, Triceps, Top Forearm, Dorsi, IT Band, Quad, Hip Flexors, Abs, Chest, Shoulders, Biceps, Bottom Forearm · Balance: 2 min/foot · Floor, Ball Side, Flat Side · Jump Rope: 125,100,75,50,25","how":"Roll slowly and pause 20-30 seconds on tender spots rather than sawing back and forth. Balance work barefoot; jump rope light and quiet on the balls of the feet."}];
+
+const TYPES = ["POWER", "STRENGTH", "HYPERTROPHY", "ENDURANCE", "ISOMETRIC"];
+const FOCUS_TYPES = ["CHEST", "FOREARM", "BAND"];
+const CARDIO_TYPES = ["CARDIO"];
+const MOBILITY_TYPES = ["MOBILITY"];
+const GROUPS = ["Push", "Pull", "Core", "Legs", "Full Body"];
+const META = {
+  POWER:       { label: "Power",       accent: "#e0843a", sub: "50-80% RM \u00b7 explosive \u00b7 3-5 reps" },
+  STRENGTH:    { label: "Strength",    accent: "#d8504e", sub: "90-100% RM \u00b7 1-6 reps \u00b7 5-8 sets" },
+  HYPERTROPHY: { label: "Hypertrophy", accent: "#5d9c6b", sub: "65-75% RM \u00b7 6-12 reps \u00b7 drop sets" },
+  ENDURANCE:   { label: "Endurance",   accent: "#3f86c4", sub: "40-60% RM \u00b7 15-30+ reps \u00b7 short rest" },
+  ISOMETRIC:   { label: "Isometric",   accent: "#a07cc9", sub: "85-100% RM \u00b7 3-10sec holds" },
+  CARDIO:      { label: "Cardio",      accent: "#3fb5b0", sub: "conditioning \u00b7 time \u00b7 distance" },
+  CHEST:       { label: "Chest Focus",   accent: "#e0678a", sub: "isolated chest work" },
+  FOREARM:     { label: "Forearm Focus", accent: "#c9a83f", sub: "grip \u00b7 wrist \u00b7 finger work" },
+  BAND:        { label: "Band Stretches", accent: "#7c9fc9", sub: "resistance band finger work" },
+  MOBILITY:    { label: "Mobility",      accent: "#8ba888", sub: "yoga \u00b7 PNF \u00b7 pilates" },
+};
+const PROTOCOL = {"POWER":"50-80% RM · move the load as fast as humanly possible · 3-5 reps × 5-10 sets · rest 2-5 min. Stop the set the moment bar speed drops - power dies with fatigue.","STRENGTH":"90-100% RM · explosive concentric, controlled eccentric · 1-6 reps × 5-8 sets · rest 3-5 min. Brace hard, own every rep, leave 1-2 in reserve.","HYPERTROPHY":"65-75% RM · slow and deliberate, especially the eccentric · 6-12 reps × 4-6 drop sets at 20-30% drops · rest 1-3 min. Chase the stretch and the burn, not the number.","ENDURANCE":"40-60% RM · smooth controlled tempo, no bouncing · 15-30+ reps × 3-5 sets · rest 30-60 sec. Breathe rhythmically and hold form as fatigue builds.","ISOMETRIC":"85-100% RM · hold the hardest position · 3-10 sec × 3-5 reps × 3-5 sets · rest 2-3 min. Build tension gradually, then push maximally without moving."};
+const RECORDS_KEY = "ethan-workout-records-v4";
+const LOG_KEY = "ethan-workout-log-v1";
+const YOGA_POS_KEY = "ethan-yoga-position-v1";
+const STATS_KEY = "ethan-roll-stats-v1";
+const VARIETY_KEY = "ethan-variety-mode-v1";
+
+const TYPE_GROUPS = {};
+TYPES.forEach(t => { const s = new Set(); DB[t].forEach(e => s.add(e.g)); TYPE_GROUPS[t] = s; });
+
+let view = "roll";
+let assignment = {}, picks = {}, locked = {}, overrides = {};
+let editing = null;
+let browsing = null, filters = {}, libFilter = "", noteMsg = "";
+let logEntries = [];
+let historyOpen = false;
+let varietySkip = 0;
+let rollStats = { pair:{}, ex:{}, typeRolls:{}, lastAssign:{}, lastEx:{} };
+let yogaSeqOpen = false;
+let yogaPosition = null;
+let manualPick = {};
+let focusNote = "";
+
+const storage = (() => {
+  try { localStorage.setItem("__t__","1"); localStorage.removeItem("__t__"); return localStorage; }
+  catch (e) { return { _d:{}, getItem(k){return this._d[k]||null;}, setItem(k,v){this._d[k]=v;}, removeItem(k){delete this._d[k];} }; }
+})();
+try { overrides = JSON.parse(storage.getItem(RECORDS_KEY)) || {}; } catch (e) { overrides = {}; }
+try { logEntries = JSON.parse(storage.getItem(LOG_KEY)) || []; } catch (e) { logEntries = []; }
+try { const raw = storage.getItem(YOGA_POS_KEY); yogaPosition = raw === null ? null : JSON.parse(raw); } catch (e) { yogaPosition = null; }
+try { const r = JSON.parse(storage.getItem(STATS_KEY)); if(r) rollStats = Object.assign(rollStats, r); } catch (e) {}
+try { const v = storage.getItem(VARIETY_KEY); if(v !== null) varietySkip = parseFloat(v); } catch (e) {}
+
+const k = (t, n) => t + "::" + n;
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function poolFor(t){
+  if (t === "CARDIO") return CARDIO;
+  if (t === "MOBILITY") return MOBILITY;
+  if (t === "CHEST" || t === "FOREARM" || t === "BAND") return FOCUS[t] || [];
+  return DB[t] || [];
+}
+function baseEx(t, n){ return poolFor(t).find(e => e.name === n) || { rm:"", record:"" }; }
+function curEx(t, n){ const o = overrides[k(t,n)], b = baseEx(t,n); return { rm:o?o.rm:b.rm, record:o?o.record:b.record, edited:!!o }; }
+function persistRecords(){ try { storage.setItem(RECORDS_KEY, JSON.stringify(overrides)); } catch(e){} }
+function persistLog(){ try { storage.setItem(LOG_KEY, JSON.stringify(logEntries)); } catch(e){} }
+function persistYogaPos(){ try { storage.setItem(YOGA_POS_KEY, JSON.stringify(yogaPosition)); } catch(e){} }
+function isEditing(t,n){ return editing && editing.t===t && editing.name===n; }
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function formatDateHuman(ds){
+  const [y,mo,da] = ds.split("-").map(Number);
+  const d = new Date(y, mo-1, da);
+  return d.toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"});
+}
+function logCountToday(t, n){
+  const today = todayStr();
+  return logEntries.filter(e => e.date===today && e.type===t && e.name===n).length;
+}
+function addLogEntry(t, n){
+  const c = curEx(t, n);
+  const b = baseEx(t, n);
+  const now = new Date();
+  logEntries.push({
+    id: now.getTime()+"-"+Math.random().toString(36).slice(2,7),
+    ts: now.getTime(),
+    date: todayStr(),
+    time: now.toTimeString().slice(0,5),
+    type: t,
+    group: b.g || "",
+    name: n,
+    rm: c.rm,
+    record: c.record
+  });
+  persistLog();
+}
+function removeLogEntry(id){ logEntries = logEntries.filter(e => e.id !== id); persistLog(); }
+
+function logBtnBig(t, n){
+  const cnt = logCountToday(t, n);
+  const cls = cnt ? "done" : "todo";
+  const label = cnt ? ("\u2713 Logged \u00d7"+cnt+" today \u00b7 tap to log again") : "+ Log this";
+  return '<button class="btn logbtn logbtn-big '+cls+'" data-act="log" data-t="'+t+'" data-n="'+esc(n)+'">'+label+'</button>';
+}
+
+function persistStats(){ try { storage.setItem(STATS_KEY, JSON.stringify(rollStats)); } catch(e){} }
+
+// Every assignment of the 5 types onto `cover`, with every group in `cover` used.
+// cover.length===5 -> strict one-per-group. cover.length===4 -> one group doubles up.
+function enumerateMatchings(cover, lockedAssign){
+  const out = [], cs = new Set(cover), strict = (cover.length === TYPES.length);
+  (function rec(i, assign, cnt){
+    if(i === TYPES.length){
+      for(const g of cover) if(!cnt[g]) return;
+      out.push(Object.assign({}, assign)); return;
+    }
+    const t = TYPES[i];
+    const opts = lockedAssign[t] ? [lockedAssign[t]] : cover;
+    for(const g of opts){
+      if(!TYPE_GROUPS[t].has(g) || !cs.has(g)) continue;
+      if(strict && cnt[g]) continue;
+      assign[t]=g; cnt[g]=(cnt[g]||0)+1;
+      rec(i+1, assign, cnt);
+      cnt[g]--; delete assign[t];
+    }
+  })(0, {}, {});
+  return out;
+}
+
+// Favour type->group pairs that are currently below their fair share, and
+// penalise repeating the same pairing two rolls running.
+function scoreMatching(m){
+  let lw = 0;
+  for(const t of TYPES){
+    const g = m[t];
+    const fair = 1 / TYPE_GROUPS[t].size;
+    const seen = (rollStats.pair[t+"::"+g] || 0) / Math.max(1, rollStats.typeRolls[t] || 0);
+    lw += 10 * (fair - seen);
+    if(rollStats.lastAssign[t] === g) lw -= 1.4;
+  }
+  return Math.exp(lw);
+}
+function weightedPick(items, weights){
+  let tot = 0; for(const w of weights) tot += w;
+  if(!(tot > 0)) return items[Math.floor(Math.random()*items.length)];
+  let r = Math.random()*tot;
+  for(let i=0;i<items.length;i++){ r -= weights[i]; if(r <= 0) return items[i]; }
+  return items[items.length-1];
+}
+// Pick within a pool, favouring exercises used least and avoiding an immediate repeat.
+function pickFromPool(t, pool, slotKey){
+  if(!pool.length) return null;
+  if(pool.length === 1) return pool[0].name;
+  const ws = pool.map(e => {
+    let w = 1 / (1 + (rollStats.ex[t+"::"+e.name] || 0));
+    if(rollStats.lastEx[slotKey] === e.name) w *= 0.15;
+    return w;
+  });
+  return weightedPick(pool, ws).name;
+}
+function recordPick(t, g, name, slotKey){
+  rollStats.pair[t+"::"+g] = (rollStats.pair[t+"::"+g] || 0) + 1;
+  rollStats.typeRolls[t] = (rollStats.typeRolls[t] || 0) + 1;
+  rollStats.ex[t+"::"+name] = (rollStats.ex[t+"::"+name] || 0) + 1;
+  rollStats.lastAssign[t] = g;
+  rollStats.lastEx[slotKey] = name;
+}
+
+function roll(all){
+  noteMsg = "";
+  let keep = all ? [] : TYPES.filter(t => locked[t] && assignment[t] && picks[t]);
+  const lockedAssign = {}; keep.forEach(t => lockedAssign[t] = assignment[t]);
+
+  // Build the candidate pool: normally all 5 groups; sometimes drop one group so
+  // Power/Endurance aren't permanently tied up by Full Body.
+  let cands = [], dropped = null;
+  if(varietySkip > 0 && Math.random() < varietySkip){
+    const byOmit = [];
+    for(const omit of GROUPS){
+      if(Object.values(lockedAssign).indexOf(omit) !== -1) continue;
+      const cover = GROUPS.filter(g => g !== omit);
+      if(TYPES.some(t => !cover.some(g => TYPE_GROUPS[t].has(g)))) continue;
+      const ms = enumerateMatchings(cover, lockedAssign);
+      if(ms.length) byOmit.push({omit, ms});
+    }
+    if(byOmit.length){
+      const chosen = weightedPick(byOmit, byOmit.map(o => {
+        let best = 0; for(const m of o.ms){ const sc = scoreMatching(m); if(sc > best) best = sc; }
+        return best;
+      }));
+      cands = chosen.ms; dropped = chosen.omit;
+    }
+  }
+  if(!cands.length){ cands = enumerateMatchings(GROUPS, lockedAssign); dropped = null; }
+  if(!cands.length){
+    noteMsg = "Locked picks couldn't fit a valid combination, so everything was re-rolled.";
+    keep = []; for(const kk in lockedAssign) delete lockedAssign[kk];
+    cands = enumerateMatchings(GROUPS, {}); dropped = null;
+  }
+
+  const chosen = weightedPick(cands, cands.map(scoreMatching));
+  assignment = Object.assign({}, chosen);
+  TYPES.forEach(t => {
+    if(keep.indexOf(t) !== -1) return;
+    const g = assignment[t];
+    const name = pickFromPool(t, DB[t].filter(e => e.g === g), t+"::"+g);
+    picks[t] = name; recordPick(t, g, name, t+"::"+g);
+  });
+  persistStats();
+  if(dropped) noteMsg = dropped + " sat this one out so the other groups get more variety.";
+  resolveFocusChest();
+  editing = null; browsing = null; render();
+}
+
+// Single-slot roller for Focus, Cardio, and Mobility - same least-used weighting.
+function rollPicks(typesArr, all){
+  typesArr.forEach(t => {
+    if(all || !locked[t] || !picks[t]){
+      if(t==="CHEST") manualPick.CHEST = false;
+      const pool = poolFor(t);
+      const name = pickFromPool(t, pool, t);
+      if(name){
+        picks[t] = name;
+        rollStats.ex[t+"::"+name] = (rollStats.ex[t+"::"+name] || 0) + 1;
+        rollStats.lastEx[t] = name;
+      }
+    }
+  });
+  persistStats();
+  if(typesArr.indexOf("CHEST") !== -1) resolveFocusChest();
+  editing = null; browsing = null; render();
+}
+
+// --- keep the Focus Chest pick from duplicating anything in the main roll ---
+const IMPLEMENT_WORDS = /\b(barbell|dumbbell|db|smith|machine|flat|weighted|pause|speed|tempo|competition|strict|full)\b/g;
+const CLASS_MOD = /\b(hold|throw|jump|slam|pass|toss|lockout|pins|pin|hip|squeeze|support|rollout)\b/;
+function normName(x){ return String(x||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim(); }
+function canonName(x){
+  let n = normName(x).replace(IMPLEMENT_WORDS," ").replace(/\s+/g," ").trim();
+  if(/\b(incline|decline)\b/.test(n)) n = n.replace(/\bbench\b/g," ").replace(/\s+/g," ").trim();
+  return n;
+}
+function sameExercise(a,b){
+  const na = normName(a), nb = normName(b);
+  if(na === nb) return true;
+  const ma = CLASS_MOD.test(na), mb = CLASS_MOD.test(nb);
+  if(ma !== mb) return false;
+  if(ma && mb && na !== nb) return false;
+  return canonName(a) === canonName(b);
+}
+function rollExerciseNames(){ return TYPES.map(t => picks[t]).filter(Boolean); }
+function clashesWithRoll(name){ return rollExerciseNames().some(n => sameExercise(n, name)); }
+
+// Main roll wins; the Focus Chest pick is the one that moves.
+function resolveFocusChest(){
+  focusNote = "";
+  const cur = picks.CHEST;
+  if(!cur) return;
+  if(!clashesWithRoll(cur)) return;
+  const clashing = rollExerciseNames().filter(n => sameExercise(n, cur))[0];
+  if(locked.CHEST || manualPick.CHEST){
+    focusNote = "Heads up - " + cur + " is also in today's main roll. It's kept because you "
+      + (locked.CHEST ? "locked" : "chose") + " it; unlock or re-roll to swap it out automatically.";
+    return;
+  }
+  const alt = poolFor("CHEST").filter(e => !clashesWithRoll(e.name));
+  if(!alt.length){
+    focusNote = "Every chest option is already in today's main roll, so " + cur + " stays.";
+    return;
+  }
+  const ws = alt.map(e => {
+    let w = 1 / (1 + (rollStats.ex["CHEST::"+e.name] || 0));
+    if(rollStats.lastEx["CHEST"] === e.name) w *= 0.15;
+    return w;
+  });
+  const chosen = weightedPick(alt, ws);
+  picks.CHEST = chosen.name;
+  rollStats.ex["CHEST::"+chosen.name] = (rollStats.ex["CHEST::"+chosen.name] || 0) + 1;
+  rollStats.lastEx["CHEST"] = chosen.name;
+  persistStats();
+  focusNote = "Chest swapped to " + chosen.name + " - " + clashing + " is already in today's main roll.";
+}
+
+function howBlock(t, name, m){
+  const ex = baseEx(t, name);
+  if(!ex || !ex.how) return "";
+  const proto = PROTOCOL[t];
+  return '<div class="how"><div class="how-label">How to perform'+(proto ? " \u00b7 "+m.label : "")+'</div>'
+    + '<div class="how-cue">'+esc(ex.how)+'</div>'
+    + (proto ? '<div class="how-proto">'+esc(proto)+'</div>' : '')
+    + '</div>';
+}
+function editForm(t, name, m, c, showRM){
+  return '<div class="edit-grid">'
+    + (showRM ? '<div><label class="field-label">Rep Max</label><input class="f mono" id="edit_rm" value="'+esc(c.rm)+'" placeholder="e.g. 225 or Body+30"></div>' : '')
+    + '<div><label class="field-label">'+(showRM ? m.label+' Record' : 'Record')+'</label><input class="f mono" id="edit_rec" value="'+esc(c.record)+'" placeholder="e.g. 210 \u00d7 5 \u00d7 5"></div>'
+    + '<div class="edit-btns"><button class="btn" style="background:'+m.accent+';color:#0e0f12;border:none;font-weight:600" data-act="save" data-t="'+t+'" data-n="'+esc(name)+'">Save</button>'
+    + '<button class="btn" data-act="cancel">Cancel</button>'
+    + (c.edited ? '<button class="btn" style="margin-left:auto;color:#9a988f" data-act="reset" data-t="'+t+'" data-n="'+esc(name)+'">Reset to default</button>' : '')
+    + '</div></div>';
+}
+
+function yogaPositionHtml(e){
+  const total = e.sequence.length;
+  const hasPos = yogaPosition !== null && yogaPosition >= 0 && yogaPosition < total;
+  const label = hasPos ? ("#"+(yogaPosition+1)+" of "+total+": "+e.sequence[yogaPosition]) : "Not started yet";
+  return '<div class="yoga-pos">'
+    + '<div class="yoga-pos-label">Last left off</div>'
+    + '<div class="yoga-pos-val">'+esc(label)+'</div>'
+    + '<div class="yoga-pos-btns">'
+    + '<button class="btn mini" data-act="yogaPrev"'+((!hasPos || yogaPosition<=0) ? ' disabled' : '')+'>\u25c0 Prev</button>'
+    + '<button class="btn mini" data-act="yogaNext"'+(hasPos && yogaPosition>=total-1 ? ' disabled' : '')+'>Next \u25b6</button>'
+    + (hasPos ? '<button class="btn mini" data-act="yogaReset" style="margin-left:auto;color:#9a988f">Reset</button>' : '')
+    + '</div></div>';
+}
+function yogaSequenceHtml(e){
+  if(!e.sequence || !e.sequence.length) return "";
+  const seqList = yogaSeqOpen ? '<ol class="yoga-seq">'+e.sequence.map((p,i)=>
+      '<li class="'+(i===yogaPosition?'current':'')+'" data-act="setYogaPos" data-idx="'+i+'">'+(i===yogaPosition?'\u25b8 ':'')+esc(p)+'</li>'
+    ).join('')+'</ol>' : '';
+  return yogaPositionHtml(e)
+    + '<div class="hist-toggle" data-act="toggleYogaSeq">'+(yogaSeqOpen?'\u25be Hide':'\u25b8 Show')+' full flow \u00b7 '+e.sequence.length+' poses</div>'
+    + seqList;
+}
+
+// Generic "one random pick, lock/swap/log/edit" card — used by Focus, Cardio roll, and Mobility roll
+function renderPickCard(t){
+  const m=META[t], name=picks[t], c=curEx(t,name), base=baseEx(t,name);
+  const isLocked=!!locked[t], edit=isEditing(t,name), isBrowse=browsing===t, fade=m.accent+"88";
+  const showRM = !!base.rm;
+  let inner;
+  if(edit){
+    inner = editForm(t, name, m, c, showRM);
+  } else if(showRM){
+    inner = '<div class="stats" data-act="edit" data-t="'+t+'" data-n="'+esc(name)+'">'
+      + '<div class="stat"><div class="stat-label">Rep Max</div><div class="stat-val'+(c.rm?'':' empty')+'">'+(c.rm?esc(c.rm):'\u2014')+'</div></div>'
+      + '<div class="stat"><div class="stat-label">Record</div><div class="stat-val'+(c.record?'':' empty')+'">'+(c.record?esc(c.record):'\u2014')+'</div></div></div>';
+  } else {
+    inner = '<div class="stat" data-act="edit" data-t="'+t+'" data-n="'+esc(name)+'" style="cursor:pointer"><div class="stat-label">Record</div><div class="stat-val'+(c.record?'':' empty')+'">'+(c.record?esc(c.record):'\u2014')+'</div></div>';
+  }
+  let browseHtml = "";
+  if(isBrowse){
+    const f=(filters[t]||"").toLowerCase();
+    const list = poolFor(t).filter(e=>e.name.toLowerCase().includes(f));
+    browseHtml = '<div class="browse"><div class="browse-hint">Swapping within '+m.label+'</div>'
+      + '<input class="f" id="filter_'+t+'" placeholder="Search..." value="'+esc(filters[t]||"")+'"><div class="chips" style="margin-top:8px">'
+      + list.map(e=>'<button class="chip '+(e.name===name?'active':'')+'" data-act="pick" data-t="'+t+'" data-n="'+esc(e.name)+'">'+esc(e.name)+(e.record?'':' <span class="dot">\u25cb</span>')+'</button>').join('')
+      + (list.length===0?'<span style="font-size:12px;color:#6b6960;padding:4px">No match.</span>':'') + '</div></div>';
+  }
+  return '<div class="card '+(isLocked?'locked':'')+'" style="--accent:'+m.accent+';--accent-fade:'+fade+'"><div class="bar"></div><div class="card-body">'
+    + '<div class="card-head"><div class="labels"><span class="type-label">'+m.label+'</span><div class="type-sub">'+m.sub+'</div></div>'
+    + '<div class="head-btns"><button class="btn mini" style="color:'+(isLocked?m.accent:'#9a988f')+';border-color:'+(isLocked?fade:'#2c2e35')+'" data-act="lock" data-t="'+t+'">'+(isLocked?'\ud83d\udd12':'\ud83d\udd13')+'</button>'
+    + '<button class="btn mini" data-act="browse" data-t="'+t+'">'+(isBrowse?'Close':'Swap')+'</button></div></div>'
+    + '<div class="ex-name">'+esc(name)+(c.edited?'<span class="edited-tag">\u25cf edited</span>':'')+'</div>'+inner
+    + howBlock(t, name, m)
+    + logBtnBig(t, name)
+    + (base.sequence ? yogaSequenceHtml(base) : '')
+    + browseHtml + '</div></div>';
+}
+
+function renderRoll(){
+  document.getElementById("cards").innerHTML = TYPES.map(t => {
+    const m=META[t], name=picks[t], grp=assignment[t], c=curEx(t,name);
+    const isLocked=!!locked[t], edit=isEditing(t,name), isBrowse=browsing===t, fade=m.accent+"88";
+    let inner = edit ? editForm(t,name,m,c,true)
+      : '<div class="stats" data-act="edit" data-t="'+t+'" data-n="'+esc(name)+'">'
+        + '<div class="stat"><div class="stat-label">Rep Max</div><div class="stat-val'+(c.rm?'':' empty')+'">'+(c.rm?esc(c.rm):'\u2014')+'</div></div>'
+        + '<div class="stat"><div class="stat-label">'+m.label+' Record</div><div class="stat-val'+(c.record?'':' empty')+'">'+(c.record?esc(c.record):'\u2014')+'</div></div></div>';
+    let browseHtml="";
+    if(isBrowse){
+      const f=(filters[t]||"").toLowerCase();
+      const list=DB[t].filter(e=>e.g===grp && e.name.toLowerCase().includes(f));
+      browseHtml='<div class="browse"><div class="browse-hint">Swapping within '+m.label+' \u00b7 '+esc(grp)+' (keeps the group covered)</div>'
+        +'<input class="f" id="filter_'+t+'" placeholder="Search..." value="'+esc(filters[t]||"")+'"><div class="chips" style="margin-top:8px">'
+        +list.map(e=>'<button class="chip '+(e.name===name?'active':'')+'" data-act="pick" data-t="'+t+'" data-n="'+esc(e.name)+'">'+esc(e.name)+(e.record?'':' <span class="dot">\u25cb</span>')+'</button>').join('')
+        +(list.length===0?'<span style="font-size:12px;color:#6b6960;padding:4px">No match.</span>':'')+'</div></div>';
+    }
+    return '<div class="card '+(isLocked?'locked':'')+'" style="--accent:'+m.accent+';--accent-fade:'+fade+'"><div class="bar"></div><div class="card-body">'
+      +'<div class="card-head"><div class="labels"><span class="type-label">'+m.label+'</span><span class="group-pill">'+esc(grp)+'</span><div class="type-sub">'+m.sub+'</div></div>'
+      +'<div class="head-btns"><button class="btn mini" style="color:'+(isLocked?m.accent:'#9a988f')+';border-color:'+(isLocked?fade:'#2c2e35')+'" data-act="lock" data-t="'+t+'">'+(isLocked?'\ud83d\udd12':'\ud83d\udd13')+'</button>'
+      +'<button class="btn mini" data-act="browse" data-t="'+t+'">'+(isBrowse?'Close':'Swap')+'</button></div></div>'
+      +'<div class="ex-name">'+esc(name)+(c.edited?'<span class="edited-tag">\u25cf edited</span>':'')+'</div>'+inner
+      + howBlock(t, name, m)
+      + logBtnBig(t, name)
+      + browseHtml + '</div></div>';
+  }).join('');
+  document.getElementById("note").textContent = noteMsg;
+  document.getElementById("note").style.display = noteMsg ? "block" : "none";
+}
+
+function renderLibrary(){
+  const f = libFilter.toLowerCase();
+  let html = '<input class="f" id="libSearch" placeholder="Search all exercises..." value="'+esc(libFilter)+'" style="margin-bottom:16px">';
+  let shown = 0;
+  TYPES.forEach(t=>{
+    const m=META[t];
+    let rows = DB[t].slice().sort((a,b)=> (GROUPS.indexOf(a.g)-GROUPS.indexOf(b.g)) || a.name.localeCompare(b.name));
+    if(f) rows = rows.filter(e=>e.name.toLowerCase().includes(f));
+    if(!rows.length) return;
+    shown += rows.length;
+    html += '<div class="lib-type" style="--accent:'+m.accent+'"><div class="lib-type-head">'+m.label+'<span class="lib-count">'+rows.length+'</span></div>';
+    rows.forEach(e=>{
+      const c=curEx(t,e.name), edit=isEditing(t,e.name);
+      html += '<div class="lib-row">'
+        +'<div class="lib-row-main" data-act="edit" data-t="'+t+'" data-n="'+esc(e.name)+'">'
+        +'<div class="lib-row-name">'+esc(e.name)+(c.record?'':' <span class="dot">\u25cb</span>')+(c.edited?'<span class="edited-tag">\u25cf</span>':'')+'</div>'
+        +'<span class="group-pill">'+esc(e.g)+'</span></div>'
+        +'<div class="lib-row-stats-line"><div class="lib-row-stats">RM <span class="mono">'+(c.rm?esc(c.rm):'\u2014')+'</span> &nbsp;\u00b7&nbsp; <span class="mono">'+(c.record?esc(c.record):'\u2014')+'</span></div>'
+        + logBtnSmall(t, e.name) + '</div>'
+        + (edit ? '<div class="lib-how">'+esc(e.how||'')+'</div>'+editForm(t,e.name,m,c,true) : '')
+        +'</div>';
+    });
+    html += '</div>';
+  });
+  [["CHEST",FOCUS.CHEST],["FOREARM",FOCUS.FOREARM],["BAND",FOCUS.BAND],
+   ["CARDIO",CARDIO],["MOBILITY",MOBILITY]].forEach(function(pair){
+    const t=pair[0], m=META[t];
+    let rows=pair[1].slice().sort((a,b)=> (a.g||"").localeCompare(b.g||"") || a.name.localeCompare(b.name));
+    if(f) rows=rows.filter(e=>e.name.toLowerCase().includes(f));
+    if(!rows.length) return;
+    shown += rows.length;
+    html += '<div class="lib-type" style="--accent:'+m.accent+'"><div class="lib-type-head">'+m.label+'<span class="lib-count">'+rows.length+'</span></div>';
+    rows.forEach(function(e){
+      const c=curEx(t,e.name), edit=isEditing(t,e.name), hasRM=!!baseEx(t,e.name).rm;
+      html += '<div class="lib-row">'
+        + '<div class="lib-row-main" data-act="edit" data-t="'+t+'" data-n="'+esc(e.name)+'">'
+        + '<div class="lib-row-name">'+esc(e.name)+(c.record?'':' <span class="dot">\u25cb</span>')+(c.edited?'<span class="edited-tag">\u25cf</span>':'')+'</div>'
+        + (e.g ? '<span class="group-pill">'+esc(e.g)+'</span>' : '') + '</div>'
+        + '<div class="lib-row-stats-line"><div class="lib-row-stats">'
+        + (hasRM ? 'RM <span class="mono">'+(c.rm?esc(c.rm):'\u2014')+'</span> &nbsp;\u00b7&nbsp; ' : '')
+        + '<span class="mono">'+(c.record?esc(c.record):'\u2014')+'</span></div>'
+        + logBtnSmall(t, e.name) + '</div>'
+        + (edit ? '<div class="lib-how">'+esc(e.how||'')+'</div>'+editForm(t,e.name,m,c,hasRM) : '')
+        + '</div>';
+    });
+    html += '</div>';
+  });
+  if(shown===0) html += '<p class="empty-note">No exercises match "'+esc(libFilter)+'".</p>';
+  document.getElementById("lib").innerHTML = html;
+}
+function logBtnSmall(t, n){
+  const cnt = logCountToday(t, n);
+  return '<button class="btn mini logbtn logbtn-sm'+(cnt?' done':'')+'" data-act="log" data-t="'+t+'" data-n="'+esc(n)+'">'+(cnt? "\u2713 \u00d7"+cnt : "+ Log")+'</button>';
+}
+
+// ================= Calendar =================
+const CATS = [
+  {key:"Resistance", color:"#4dd0e1"},
+  {key:"Focus",      color:"#b39ddb"},
+  {key:"Cardio",     color:"#f4794a"},
+  {key:"Mobility",   color:"#7bc67e"},
+];
+function categoryOf(t){
+  if(TYPES.indexOf(t) !== -1) return "Resistance";
+  if(FOCUS_TYPES.indexOf(t) !== -1) return "Focus";
+  if(t === "CARDIO") return "Cardio";
+  if(t === "MOBILITY") return "Mobility";
+  return "Resistance";
+}
+let calPeriod = "month";          // "month" | "week"
+let calAnchor = new Date();       // any date inside the shown period
+let calSelected = null;           // "YYYY-MM-DD"
+
+function ymd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function startOfWeek(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; }
+function calRange(){
+  if(calPeriod === "week"){
+    const a=startOfWeek(calAnchor), b=new Date(a); b.setDate(b.getDate()+6);
+    return {from:a, to:b};
+  }
+  const a=new Date(calAnchor.getFullYear(), calAnchor.getMonth(), 1);
+  const b=new Date(calAnchor.getFullYear(), calAnchor.getMonth()+1, 0);
+  return {from:a, to:b};
+}
+function calShift(dir){
+  const d=new Date(calAnchor);
+  if(calPeriod === "week") d.setDate(d.getDate()+7*dir); else d.setMonth(d.getMonth()+dir);
+  calAnchor=d; calSelected=null;
+}
+function entriesInRange(){
+  const r=calRange(), from=ymd(r.from), to=ymd(r.to);
+  return logEntries.filter(e => e.date >= from && e.date <= to);
+}
+function countsByCat(list){
+  const c={}; CATS.forEach(x=>c[x.key]=0);
+  list.forEach(e=>{ const k=categoryOf(e.type); if(c[k]!==undefined) c[k]++; });
+  return c;
+}
+function donut(segments, total, centerText, centerSub){
+  const R=42, C=2*Math.PI*R, size=104;
+  let off=0, paths="";
+  const sum=segments.reduce((a,b)=>a+b.value,0);
+  if(sum>0){
+    segments.forEach(sg=>{
+      if(sg.value<=0) return;
+      const len=(sg.value/sum)*C;
+      paths+='<circle cx="52" cy="52" r="'+R+'" fill="none" stroke="'+sg.color+'" stroke-width="10"'
+           + ' stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'"'
+           + ' stroke-dashoffset="'+(-off).toFixed(2)+'" transform="rotate(-90 52 52)" stroke-linecap="butt"></circle>';
+      off+=len;
+    });
+  }
+  return '<svg viewBox="0 0 '+size+' '+size+'" width="104" height="104">'
+    + '<circle cx="52" cy="52" r="'+R+'" fill="none" stroke="#1e2233" stroke-width="10"></circle>'
+    + paths
+    + '<text x="52" y="50" text-anchor="middle" class="ring-val">'+esc(centerText)+'</text>'
+    + '<text x="52" y="66" text-anchor="middle" class="ring-unit">'+esc(centerSub)+'</text></svg>';
+}
+function currentStreak(){
+  const days=new Set(logEntries.map(e=>e.date));
+  let n=0; const d=new Date();
+  if(!days.has(ymd(d))) d.setDate(d.getDate()-1);   // today not logged yet is fine
+  while(days.has(ymd(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function renderBreakdown(list){
+  const M={}; TYPES.forEach(t=>{ M[t]={}; GROUPS.forEach(g=>M[t][g]=0); });
+  const FOCUS_ROWS=[["CHEST","Chest Focus"],["FOREARM","Forearm Focus"],["BAND","Band Stretches"]];
+  const fc={}; FOCUS_ROWS.forEach(r=>fc[r[0]]=0);
+  const oc={CARDIO:0, MOBILITY:0};
+  let resistTotal=0;
+  list.forEach(e=>{
+    if(TYPES.indexOf(e.type)!==-1){
+      if(M[e.type][e.group]!==undefined){ M[e.type][e.group]++; resistTotal++; }
+    } else if(fc[e.type]!==undefined) fc[e.type]++;
+    else if(oc[e.type]!==undefined) oc[e.type]++;
+  });
+  let peak=0; TYPES.forEach(t=>GROUPS.forEach(g=>{ if(M[t][g]>peak) peak=M[t][g]; }));
+
+  let h='<div class="cal-panel"><div class="sec-h" style="color:var(--teal);font-size:12px;letter-spacing:1.3px;'
+    + 'text-transform:uppercase;font-weight:700;margin-bottom:14px;display:flex">Training breakdown'
+    + '<span style="margin-left:auto;color:var(--dim-2);font-size:11px;letter-spacing:0">'+resistTotal+' resistance exercises</span></div>';
+
+  if(!resistTotal && !Object.values(fc).some(Boolean) && !Object.values(oc).some(Boolean)){
+    return h + '<div class="cal-empty">Nothing logged in this period yet.</div></div>';
+  }
+
+  h += '<table class="bd"><tr><th class="rowh">Type</th>'
+     + GROUPS.map(g=>'<th>'+esc(g==="Full Body"?"Body":g)+'</th>').join('')
+     + '<th>Total</th></tr>';
+  TYPES.forEach(t=>{
+    const m=META[t]; let rowTot=0; GROUPS.forEach(g=>rowTot+=M[t][g]);
+    h += '<tr><td class="rowh" style="color:'+m.accent+'">'+esc(m.label)+'</td>';
+    GROUPS.forEach(g=>{
+      const v=M[t][g];
+      const a = (v && peak) ? (0.16 + 0.62*(v/peak)) : 0;
+      h += '<td style="'+(v?'background:'+m.accent+String(Math.round(a*255).toString(16)).padStart(2,"0")
+           +';color:#12141f':'')+'">'+(v||'&middot;')+'</td>';
+    });
+    h += '<td class="tot">'+(rowTot||'&middot;')+'</td></tr>';
+  });
+  h += '<tr class="totrow"><td class="rowh">Total</td>'
+     + GROUPS.map(g=>{ let c=0; TYPES.forEach(t=>c+=M[t][g]); return '<td>'+(c||'&middot;')+'</td>'; }).join('')
+     + '<td>'+(resistTotal||'&middot;')+'</td></tr></table>';
+
+  const extras = FOCUS_ROWS.map(r=>[r[1], fc[r[0]], META[r[0]].accent])
+    .concat([["Cardio", oc.CARDIO, META.CARDIO.accent], ["Mobility", oc.MOBILITY, META.MOBILITY.accent]]);
+  h += '<div class="bd-chips">' + extras.map(x=>
+      '<div class="bd-chip"><span class="sw" style="background:'+x[2]+'"></span>'
+      + '<span class="nm">'+esc(x[0])+'</span><span class="ct" style="color:'+x[2]+'">'+x[1]+'</span></div>').join('')
+    + '</div>';
+  h += '<div class="bd-note">Rows are training types, columns are movement groups &mdash; each cell counts the exercises you logged in that combination. Focus, cardio and mobility sit outside the group split and are counted separately.</div>';
+  return h+'</div>';
+}
+
+function renderCalendar(){
+  const r=calRange(), list=entriesInRange(), counts=countsByCat(list);
+  const total=list.length;
+  const daysWith=new Set(list.map(e=>e.date));
+  const totalDays=Math.round((r.to-r.from)/86400000)+1;
+
+  const title = calPeriod==="week"
+    ? r.from.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" - "+r.to.toLocaleDateString(undefined,{month:"short",day:"numeric"})
+    : calAnchor.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+
+  let h='<div class="cal-panel"><div class="cal-top"><div class="cal-title">'+esc(title)+'</div>'
+    + '<div class="cal-nav">'
+    + '<button class="btn mini" data-act="calPrev">&#9664;</button>'
+    + '<button class="btn mini" data-act="calToday">Today</button>'
+    + '<button class="btn mini" data-act="calNext">&#9654;</button>'
+    + '<button class="btn mini" data-act="calPeriod">'+(calPeriod==="month"?"Month":"Week")+'</button>'
+    + '</div></div>';
+
+  h+='<div class="rings">'
+   + '<div class="ring-wrap">'+donut(CATS.map(c=>({value:counts[c.key],color:c.color})),total,String(total),"logged")
+   + '<div class="ring-cap">Exercises</div></div>'
+   + '<div class="ring-wrap">'+donut([{value:daysWith.size,color:"#4db6ac"},{value:Math.max(0,totalDays-daysWith.size),color:"#2c3145"}],
+        totalDays, daysWith.size+"/"+totalDays, "days")
+   + '<div class="ring-cap">Days trained</div></div>'
+   + '</div>';
+
+  h+='<div class="legend">'+CATS.map(c=>
+      '<div class="legend-item"><span class="legend-swatch" style="background:'+c.color+'"></span>'
+      + '<span class="legend-name">'+c.key+'</span><span class="legend-count" style="color:'+c.color+'">'+counts[c.key]+'</span></div>'
+    ).join('')+'</div>';
+
+  const perDay = daysWith.size ? (total/daysWith.size) : 0;
+  h+='<div class="streak">'
+   + '<div class="streak-box"><div class="streak-n" style="color:var(--orange)">'+currentStreak()+'</div><div class="streak-l">Day streak</div></div>'
+   + '<div class="streak-box"><div class="streak-n">'+perDay.toFixed(1)+'</div><div class="streak-l">Avg / day</div></div>'
+   + '<div class="streak-box"><div class="streak-n">'+Math.round(daysWith.size/totalDays*100)+'%</div><div class="streak-l">Consistency</div></div>'
+   + '</div></div>';
+
+  h += renderBreakdown(list);
+
+  // ---- grid ----
+  const byDay={};
+  list.forEach(e=>{ (byDay[e.date]=byDay[e.date]||new Set()).add(categoryOf(e.type)); });
+  const countPerDay={};
+  list.forEach(e=>{ countPerDay[e.date]=(countPerDay[e.date]||0)+1; });
+
+  h+='<div class="cal-panel"><div class="cal-grid">'
+   + ["S","M","T","W","T","F","S"].map(d=>'<div class="cal-dow">'+d+'</div>').join('');
+  let cur, endD;
+  if(calPeriod==="month"){
+    cur=new Date(r.from); cur.setDate(cur.getDate()-r.from.getDay());
+    endD=new Date(r.to); endD.setDate(endD.getDate()+(6-r.to.getDay()));
+  } else { cur=new Date(r.from); endD=new Date(r.to); }
+  const todayKey=ymd(new Date());
+  while(cur<=endD){
+    const key=ymd(cur), inRange=(key>=ymd(r.from) && key<=ymd(r.to));
+    if(!inRange){ h+='<div class="cal-cell blank"></div>'; }
+    else{
+      const cats=byDay[key];
+      const cls="cal-cell"+(cats?" has":"")+(key===todayKey?" today":"")+(key===calSelected?" sel":"");
+      h+='<div class="'+cls+'" data-act="calDay" data-d="'+key+'"><div class="cal-num">'+cur.getDate()+'</div><div class="cal-dots">'
+       + (cats?CATS.filter(c=>cats.has(c.key)).map(c=>'<span class="cal-dot" style="background:'+c.color+'"></span>').join(''):'')
+       + '</div></div>';
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  h+='</div>';
+
+  if(calSelected){
+    const es=logEntries.filter(e=>e.date===calSelected).sort((a,b)=>a.ts-b.ts);
+    h+='<div class="cal-daylist"><div class="hist-day">'+formatDateHuman(calSelected)+' <span class="lib-count">'+es.length+'</span></div>';
+    h+= es.length ? es.map(logRow).join('') : '<div class="cal-empty">Nothing logged this day.</div>';
+    h+='</div>';
+  } else {
+    h+='<div class="cal-empty">Tap a day to see what you did.</div>';
+  }
+  h+='</div>';
+  document.getElementById("cal").innerHTML=h;
+}
+
+function logRow(e){
+  const m = META[e.type] || { label: e.type, accent: "#8a887f" };
+  const label = m.label + (e.group ? " \u00b7 "+e.group : "");
+  return '<div class="log-row"><div class="log-row-main">'
+    + '<span class="group-pill" style="border-color:'+m.accent+'66;color:'+m.accent+'">'+esc(label)+'</span>'
+    + '<div class="log-row-name">'+esc(e.name)+'</div>'
+    + '<div class="log-row-time mono">'+esc(e.time)+'</div>'
+    + '<button class="btn mini" data-act="delLog" data-id="'+e.id+'">\u2715</button>'
+    + '</div>'
+    + ((e.rm || e.record) ? '<div class="log-row-detail mono">'+(e.rm?esc(e.rm)+' \u00b7 ':'')+esc(e.record||'')+'</div>' : '')
+    + '</div>';
+}
+function renderLog(){
+  const today = todayStr();
+  const todays = logEntries.filter(e=>e.date===today).sort((a,b)=>b.ts-a.ts);
+  let html = '<div class="log-head"><div><div class="log-date">Today \u00b7 '+formatDateHuman(today)+'</div>'
+    + '<div class="log-sub">'+todays.length+' exercise'+(todays.length===1?'':'s')+' logged</div></div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="btn" data-act="healthOpen">&#10084; Apple Health</button>'
+    + '<button class="btn btn-primary" data-act="exportOpen">&#11015; Export</button></div></div>';
+  if(todays.length===0){
+    html += '<p class="empty-note">Nothing logged yet today. Tap "Log this" on any exercise in Roll, Library, Cardio, Focus, or Mobility to add it here.</p>';
+  } else {
+    todays.forEach(e => html += logRow(e));
+  }
+  const rest = logEntries.filter(e=>e.date!==today);
+  if(rest.length){
+    const byDate = {};
+    rest.forEach(e => (byDate[e.date] = byDate[e.date] || []).push(e));
+    const dates = Object.keys(byDate).sort().reverse();
+    html += '<div class="hist-toggle" data-act="toggleHistory">'+(historyOpen?'\u25be':'\u25b8')+' History \u00b7 '+rest.length+' more entr'+(rest.length===1?'y':'ies')+' across '+dates.length+' day'+(dates.length===1?'':'s')+'</div>';
+    if(historyOpen){
+      dates.forEach(d=>{
+        const es = byDate[d].slice().sort((a,b)=>b.ts-a.ts);
+        html += '<div class="hist-day">'+formatDateHuman(d)+' <span class="lib-count">'+es.length+'</span></div>';
+        es.forEach(e => html += logRow(e));
+      });
+    }
+  }
+  document.getElementById("log").innerHTML = html;
+}
+
+function render(){
+  document.getElementById("count").textContent = TYPES.reduce((n,t)=>n+DB[t].length,0)+" lifts \u00b7 "+CARDIO.length+" cardio \u00b7 "+FOCUS_TYPES.reduce((n,t)=>n+FOCUS[t].length,0)+" focus \u00b7 "+MOBILITY.length+" mobility";
+  document.getElementById("rollView").style.display = view==="roll" ? "block" : "none";
+  document.getElementById("libView").style.display = view==="library" ? "block" : "none";
+  document.getElementById("cardioView").style.display = view==="cardio" ? "block" : "none";
+  document.getElementById("focusView").style.display = view==="focus" ? "block" : "none";
+  document.getElementById("mobilityView").style.display = view==="mobility" ? "block" : "none";
+  document.getElementById("logView").style.display = view==="log" ? "block" : "none";
+  document.getElementById("calView").style.display = view==="calendar" ? "block" : "none";
+  document.getElementById("tabRoll").classList.toggle("active", view==="roll");
+  document.getElementById("tabLib").classList.toggle("active", view==="library");
+  document.getElementById("tabCardio").classList.toggle("active", view==="cardio");
+  document.getElementById("tabFocus").classList.toggle("active", view==="focus");
+  document.getElementById("tabMobility").classList.toggle("active", view==="mobility");
+  document.getElementById("tabLog").classList.toggle("active", view==="log");
+  document.getElementById("tabCal").classList.toggle("active", view==="calendar");
+  const scopeNow = (view==="roll"||view==="focus"||view==="cardio"||view==="mobility");
+  document.getElementById("globalControls").style.display = scopeNow ? "flex" : "none";
+  document.getElementById("varietyMode").style.display = (view==="roll") ? "" : "none";
+  document.getElementById("resetVariety").style.display = (view==="roll") ? "" : "none";
+  if(view==="roll") renderRoll();
+  else if(view==="library") renderLibrary();
+  else if(view==="cardio") document.getElementById("cardio").innerHTML = renderPickCard("CARDIO");
+  else if(view==="focus"){
+    document.getElementById("focus").innerHTML = FOCUS_TYPES.map(renderPickCard).join('');
+    const fn = document.getElementById("focusNote");
+    fn.textContent = focusNote; fn.style.display = focusNote ? "block" : "none";
+  }
+  else if(view==="mobility") document.getElementById("mobility").innerHTML = renderPickCard("MOBILITY");
+  else if(view==="log") renderLog();
+  else if(view==="calendar") renderCalendar();
+}
+function rerender(){ const y=window.scrollY; render(); window.scrollTo(0,y); }
+
+// ---- native HealthKit bridge (present only inside the iOS wrapper) ----
+const NATIVE_HEALTH = (typeof window !== "undefined") && window.__NATIVE_HEALTH__ === true
+  && !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.health);
+const __healthCalls = {};
+window.__healthReply = function(json){
+  let d; try { d = JSON.parse(json); } catch(e){ return; }
+  const c = __healthCalls[d.callId];
+  if(!c) return;
+  delete __healthCalls[d.callId];
+  d.ok ? c.resolve(d) : c.reject(new Error(d.error || "Health request failed"));
+};
+function healthCall(action, params){
+  return new Promise((resolve, reject) => {
+    if(!NATIVE_HEALTH){ reject(new Error("Native Health bridge unavailable")); return; }
+    const callId = String(Date.now()) + Math.random().toString(36).slice(2,7);
+    __healthCalls[callId] = { resolve, reject };
+    const msg = Object.assign({ action: action, callId: callId }, params || {});
+    window.webkit.messageHandlers.health.postMessage(msg);
+    setTimeout(() => {
+      if(__healthCalls[callId]){ delete __healthCalls[callId]; reject(new Error("Health request timed out")); }
+    }, 20000);
+  });
+}
+async function nativeSaveWorkout(){
+  const es = hkTodayEntries();
+  const mEl = document.getElementById("hkMinutes");
+  const minutes = Math.max(1, parseInt(mEl && mEl.value, 10) || hkGuessMinutes());
+  const detail = es.map(e => {
+    const m = META[e.type] || { label: e.type };
+    return m.label + (e.group ? " " + e.group : "") + ": " + e.name;
+  }).join("; ");
+  return healthCall("saveWorkout", { minutes: minutes, detail: detail, exercises: es.length });
+}
+async function nativeBodyMass(){ return healthCall("bodyMass", {}); }
+
+const HK_NAME_KEY = "ethan-hk-shortcut-name-v1";
+function hkTodayEntries(){ const d=todayStr(); return logEntries.filter(e=>e.date===d).sort((a,b)=>a.ts-b.ts); }
+function hkGuessMinutes(){
+  const es=hkTodayEntries();
+  if(es.length<2) return 45;
+  const m=Math.round((es[es.length-1].ts-es[0].ts)/60000);
+  return m<1 ? 45 : m;
+}
+function hkShortcutName(){
+  try { return storage.getItem(HK_NAME_KEY) || "Log Training Roll Workout"; } catch(e){ return "Log Training Roll Workout"; }
+}
+function hkPayload(){
+  const es=hkTodayEntries();
+  const mEl=document.getElementById("hkMinutes");
+  const minutes=Math.max(1, parseInt(mEl && mEl.value, 10) || hkGuessMinutes());
+  const detail=es.map(e=>{
+    const m=META[e.type]||{label:e.type};
+    return m.label+(e.group?" "+e.group:"")+": "+e.name+(e.record?" ("+e.record+")":"");
+  }).join("; ");
+  return JSON.stringify({
+    app:"Training Roll", date:todayStr(), minutes:minutes,
+    exercises:es.length, detail:detail,
+    volume:es.map(e=>e.name).join(", ")
+  });
+}
+function refreshHealthModal(){
+  const es=hkTodayEntries();
+  const warn=document.getElementById("hkWarn");
+  if(!es.length){
+    warn.style.display="block";
+    warn.textContent="Nothing is logged today yet - tap \"Log this\" on the exercises you've done, then come back.";
+  } else { warn.style.display="none"; }
+  document.getElementById("hkPayload").value=hkPayload();
+}
+function openHealth(){
+  if(NATIVE_HEALTH){
+    document.querySelector("#healthModal .modal-sub").textContent =
+      "Saves the session straight into Apple Health as a Traditional Strength Training workout, with the exercise list attached.";
+    ["hkName","hkSteps","hkCopy"].forEach(function(id){
+      const el = document.getElementById(id) || document.querySelector('[data-act="'+id+'"]');
+      if(el){ const wrap = el.closest("div"); if(id==="hkName" && wrap) wrap.style.display="none"; else el.style.display="none"; }
+    });
+    const pay = document.getElementById("hkPayload"); if(pay) pay.style.display="none";
+    const btn = document.querySelector('[data-act="hkSend"]'); if(btn) btn.textContent = "\u2764 Save to Health";
+    const wb = document.getElementById("hkWeightBtn"); if(wb) wb.style.display="";
+  }
+  const mEl=document.getElementById("hkMinutes");
+  if(!mEl.value) mEl.value=String(hkGuessMinutes());
+  document.getElementById("hkName").value=hkShortcutName();
+  refreshHealthModal();
+  document.getElementById("healthModal").style.display="flex";
+}
+function sendToHealth(){
+  if(NATIVE_HEALTH){
+    const btn = document.querySelector('[data-act="hkSend"]');
+    const label = btn ? btn.textContent : "";
+    if(btn){ btn.textContent = "Saving..."; btn.disabled = true; }
+    nativeSaveWorkout().then(() => {
+      if(btn){ btn.textContent = "\u2713 Saved to Health"; setTimeout(()=>{ btn.textContent=label; btn.disabled=false; }, 2200); }
+    }).catch(err => {
+      if(btn){ btn.textContent = label; btn.disabled = false; }
+      const w = document.getElementById("hkWarn");
+      w.style.display = "block"; w.textContent = err.message;
+    });
+    return;
+  }
+  const name=(document.getElementById("hkName").value||"Log Training Roll Workout").trim();
+  try { storage.setItem(HK_NAME_KEY,name); } catch(e){}
+  const url="shortcuts://run-shortcut?name="+encodeURIComponent(name)
+    +"&input=text&text="+encodeURIComponent(hkPayload());
+  window.location.href=url;
+}
+
+function csvValue(v){ v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function buildCsv(){
+  const header = ["Date","Time","Type","Group","Exercise","RM","Record"];
+  const rows = logEntries.slice().sort((a,b)=>a.ts-b.ts).map(e=>[e.date,e.time,e.type,e.group,e.name,e.rm,e.record]);
+  return [header, ...rows].map(r => r.map(csvValue).join(",")).join("\r\n");
+}
+function attemptDownload(csv){
+  try {
+    const blob = new Blob([csv], {type:"text/csv"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "workout-log-"+todayStr()+".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    return true;
+  } catch(e){ return false; }
+}
+function openExport(){
+  const csv = buildCsv();
+  document.getElementById("csvText").value = csv;
+  document.getElementById("exportModal").style.display = "flex";
+  attemptDownload(csv);
+}
+function flashCopied(btn){
+  if(!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = "Copied!";
+  setTimeout(()=>{ btn.textContent = orig; }, 1400);
+}
+
+document.body.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  const act=el.dataset.act, t=el.dataset.t, n=el.dataset.n;
+  if(act==="lock"){ locked[t]=!locked[t]; rerender(); }
+  else if(act==="browse"){ browsing = browsing===t?null:t; filters[t]=""; editing=null; rerender(); }
+  else if(act==="pick"){
+    picks[t]=n; browsing=null; filters[t]="";
+    if(t==="CHEST") manualPick.CHEST = true;
+    if(TYPES.indexOf(t) !== -1) resolveFocusChest();
+    else if(t==="CHEST") focusNote = clashesWithRoll(n) ? ("Note - "+n+" is also in today's main roll.") : "";
+    rerender();
+  }
+  else if(act==="edit"){ editing={t,name:n}; if(view!=="library") browsing=null; rerender();
+    const inp = document.getElementById("edit_rm") || document.getElementById("edit_rec"); if(inp) inp.focus(); }
+  else if(act==="cancel"){ editing=null; rerender(); }
+  else if(act==="save"){
+    const rmEl = document.getElementById("edit_rm");
+    overrides[k(t,n)] = { rm: rmEl ? rmEl.value : "", record: document.getElementById("edit_rec").value };
+    persistRecords(); editing=null; rerender();
+  }
+  else if(act==="reset"){ delete overrides[k(t,n)]; persistRecords(); editing=null; rerender(); }
+  else if(act==="log"){ addLogEntry(t, n); rerender(); }
+  else if(act==="delLog"){ removeLogEntry(el.dataset.id); rerender(); }
+  else if(act==="toggleHistory"){ historyOpen = !historyOpen; rerender(); }
+  else if(act==="calPrev"){ calShift(-1); rerender(); }
+  else if(act==="calNext"){ calShift(1); rerender(); }
+  else if(act==="calToday"){ calAnchor=new Date(); calSelected=null; rerender(); }
+  else if(act==="calPeriod"){ calPeriod = calPeriod==="month" ? "week" : "month"; calSelected=null; rerender(); }
+  else if(act==="calDay"){ calSelected = (calSelected===el.dataset.d) ? null : el.dataset.d; rerender(); }
+  else if(act==="toggleYogaSeq"){ yogaSeqOpen = !yogaSeqOpen; rerender(); }
+  else if(act==="setYogaPos"){ yogaPosition = parseInt(el.dataset.idx, 10); persistYogaPos(); rerender(); }
+  else if(act==="yogaNext"){
+    const total = MOBILITY.find(e=>e.sequence).sequence.length;
+    yogaPosition = (yogaPosition===null) ? 0 : Math.min(yogaPosition+1, total-1);
+    persistYogaPos(); rerender();
+  }
+  else if(act==="yogaPrev"){
+    if(yogaPosition!==null) yogaPosition = Math.max(yogaPosition-1, 0);
+    persistYogaPos(); rerender();
+  }
+  else if(act==="yogaReset"){ yogaPosition = null; persistYogaPos(); rerender(); }
+  else if(act==="exportOpen"){ openExport(); }
+  else if(act==="downloadCsv"){ attemptDownload(document.getElementById("csvText").value); }
+  else if(act==="copyCsv"){
+    const ta = document.getElementById("csvText");
+    ta.focus(); ta.select(); ta.setSelectionRange(0, 999999);
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch(err) {}
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(()=>flashCopied(el)).catch(()=>{ if(ok) flashCopied(el); });
+    } else if(ok){ flashCopied(el); }
+  }
+  else if(act==="closeExport"){ document.getElementById("exportModal").style.display = "none"; }
+  else if(act==="healthOpen"){ openHealth(); }
+  else if(act==="closeHealth"){ document.getElementById("healthModal").style.display = "none"; }
+  else if(act==="hkSend"){ sendToHealth(); }
+  else if(act==="hkWeight"){
+    nativeBodyMass().then(d => {
+      const w=document.getElementById("hkWarn"); w.style.display="block";
+      w.textContent = "Latest bodyweight in Health: " + Math.round(d.pounds) + " lb - Body+N records resolve against this.";
+      try { storage.setItem("ethan-bodyweight-lb", String(Math.round(d.pounds))); } catch(e){}
+    }).catch(err => {
+      const w=document.getElementById("hkWarn"); w.style.display="block"; w.textContent = err.message;
+    });
+  }
+  else if(act==="hkSteps"){ const b=document.getElementById("hkStepsBox");
+    b.style.display = b.style.display==="none" ? "block" : "none"; }
+  else if(act==="hkCopy"){
+    const ta=document.getElementById("hkPayload");
+    ta.focus(); ta.select(); ta.setSelectionRange(0,999999);
+    let ok=false; try{ ok=document.execCommand("copy"); }catch(err){}
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(()=>flashCopied(el)).catch(()=>{ if(ok) flashCopied(el); });
+    } else if(ok){ flashCopied(el); }
+  }
+});
+document.body.addEventListener("input", (e) => {
+  if(e.target.id==="hkMinutes"){ refreshHealthModal(); return; }
+  if(e.target.id==="libSearch"){
+    libFilter = e.target.value; editing=null; renderLibrary();
+    const s = document.getElementById("libSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length);
+    return;
+  }
+  const swappable = ["CHEST","FOREARM","BAND","CARDIO","MOBILITY"];
+  if(swappable.some(ty => e.target.id === "filter_"+ty)){
+    const t = e.target.id.replace("filter_","");
+    filters[t] = e.target.value;
+    const f = e.target.value.toLowerCase();
+    const list = poolFor(t).filter(ex => ex.name.toLowerCase().includes(f));
+    e.target.parentElement.querySelector(".chips").innerHTML = list.length
+      ? list.map(ex => '<button class="chip '+(ex.name===picks[t]?'active':'')+'" data-act="pick" data-t="'+t+'" data-n="'+esc(ex.name)+'">'+esc(ex.name)+(ex.record?'':' <span class="dot">\u25cb</span>')+'</button>').join('')
+      : '<span style="font-size:12px;color:#6b6960;padding:4px">No match.</span>';
+    return;
+  }
+  const t = TYPES.find(ty => e.target.id === "filter_"+ty); if(!t) return;
+  filters[t] = e.target.value;
+  const f = e.target.value.toLowerCase(), grp = assignment[t];
+  const list = DB[t].filter(ex => ex.g===grp && ex.name.toLowerCase().includes(f));
+  e.target.parentElement.querySelector(".chips").innerHTML = list.length
+    ? list.map(ex => '<button class="chip '+(ex.name===picks[t]?'active':'')+'" data-act="pick" data-t="'+t+'" data-n="'+esc(ex.name)+'">'+esc(ex.name)+(ex.record?'':' <span class="dot">\u25cb</span>')+'</button>').join('')
+    : '<span style="font-size:12px;color:#6b6960;padding:4px">No match.</span>';
+});
+document.getElementById("tabRoll").addEventListener("click", () => { view="roll"; editing=null; window.scrollTo(0,0); render(); });
+document.getElementById("tabLib").addEventListener("click", () => { view="library"; editing=null; browsing=null; window.scrollTo(0,0); render(); });
+document.getElementById("tabCardio").addEventListener("click", () => { view="cardio"; editing=null; window.scrollTo(0,0); render(); });
+document.getElementById("tabFocus").addEventListener("click", () => { view="focus"; editing=null; window.scrollTo(0,0); render(); });
+document.getElementById("tabMobility").addEventListener("click", () => { view="mobility"; editing=null; window.scrollTo(0,0); render(); });
+document.getElementById("tabLog").addEventListener("click", () => { view="log"; editing=null; window.scrollTo(0,0); render(); });
+document.getElementById("tabCal").addEventListener("click", () => { view="calendar"; editing=null; window.scrollTo(0,0); render(); });
+function currentRollScope(){
+  if(view==="roll") return "MAIN";
+  if(view==="focus") return FOCUS_TYPES;
+  if(view==="cardio") return CARDIO_TYPES;
+  if(view==="mobility") return MOBILITY_TYPES;
+  return null;
+}
+function doRoll(all){
+  const scope = currentRollScope();
+  if(!scope) return;
+  if(scope === "MAIN") roll(all); else rollPicks(scope, all);
+}
+function doUnlock(){
+  const scope = currentRollScope();
+  if(!scope) return;
+  (scope === "MAIN" ? TYPES : scope).forEach(t => { delete locked[t]; });
+  rerender();
+}
+document.getElementById("gRoll").addEventListener("click", () => doRoll(false));
+document.getElementById("gRollAll").addEventListener("click", () => doRoll(true));
+document.getElementById("gUnlock").addEventListener("click", doUnlock);
+
+roll(true);
+rollPicks(FOCUS_TYPES, true);
+rollPicks(CARDIO_TYPES, true);
+rollPicks(MOBILITY_TYPES, true);
+resolveFocusChest();
+render();
+</script>
+</body>
+</html>
