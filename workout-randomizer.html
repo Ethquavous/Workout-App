@@ -233,15 +233,17 @@
   .mb-count { font-size:13px; font-weight:700; color:var(--mc); width:52px; text-align:right; flex-shrink:0; }
   .mb-sec { font-size:11px; color:var(--dim-2); font-weight:600; margin-left:2px; }
 
-  /* ---- interactive body graphic ---- */
+  /* ---- interactive body graphic (glowing wireframe hologram) ---- */
   .body-row { display:flex; justify-content:center; gap:22px; flex-wrap:wrap; }
   .body-col { text-align:center; }
   .body-svg { max-width:100%; height:auto; }
   .body-view-label { font-size:10px; color:var(--dim-2); text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-top:2px; }
-  .body-deco { fill:rgba(255,255,255,.05); stroke:rgba(255,255,255,.1); stroke-width:1; }
-  .body-region { fill:var(--mc); fill-opacity:var(--inten,.08); stroke:var(--mc); stroke-width:1; stroke-opacity:.55; cursor:pointer; transition:.15s; }
-  .body-region:hover { fill-opacity:.55; stroke-opacity:1; }
-  .body-region.sel { fill-opacity:.8; stroke-width:2.5; stroke-opacity:1; }
+  .chassis-fill { fill:rgba(91,226,234,.14); stroke:none; }
+  .chassis-outline { fill:none; stroke:#5be2ea; stroke-width:1.3; stroke-opacity:.85; }
+  .body-mesh .mesh-h, .body-mesh .mesh-v { stroke:#5be2ea; stroke-width:.6; opacity:.35; }
+  .body-region { fill:var(--mc); fill-opacity:var(--inten,.05); stroke:none; cursor:pointer; transition:.15s; }
+  .body-region:hover { fill-opacity:.62; stroke:var(--mc); stroke-width:1.2; stroke-opacity:.9; }
+  .body-region.sel { fill-opacity:.75; stroke:var(--mc); stroke-width:2.2; stroke-opacity:1; }
 
   /* ---- muscle detail panel ---- */
   .md-panel { margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,.09); }
@@ -497,40 +499,47 @@ const MUSCLE_META = {
 };
 const MUSCLES = Object.keys(MUSCLE_META);
 
-// Simplified front/back body-map regions. Each region is one clickable shape
-// tagged with the muscle key it represents; several shapes can share a key
-// (e.g. left/right limbs, or a muscle visible on both views).
+// Smooth front/back body-map regions (hand-authored bezier blobs, not boxes).
+// Each region is one clickable shape tagged with the muscle key it represents;
+// several shapes can share a key (e.g. left/right limbs, or a muscle visible
+// on both views). BODY_SIL is the outer silhouette, used both as the glowing
+// chassis outline and as a clip-path so regions/mesh never poke past the body.
+const BODY_SIL = "M100.0,10.0 C101.1,10.2 110.3,11.1 112.0,12.0 C113.7,12.9 118.2,18.4 119.0,20.0 C119.8,21.6 121.0,28.3 121.0,30.0 C121.0,31.7 119.7,37.5 119.0,39.0 C118.3,40.5 114.3,45.8 113.0,47.0 C111.7,48.2 105.2,51.4 105.0,52.0 C104.8,52.6 109.3,51.6 111.0,54.0 C112.7,56.4 121.5,73.8 124.0,78.0 C126.5,82.2 137.8,98.8 139.0,99.7 C140.2,100.7 136.9,90.2 137.2,88.1 C137.5,86.1 140.8,79.0 142.2,77.4 C143.6,75.8 150.4,71.5 152.5,70.9 C154.5,70.3 162.7,70.2 164.8,70.7 C166.9,71.3 173.8,75.4 175.3,76.9 C176.7,78.4 180.0,85.8 180.7,87.4 C181.3,89.1 182.0,91.1 182.6,95.1 C183.2,99.1 187.3,125.1 187.0,131.5 C186.7,138.0 179.6,162.7 178.8,166.0 C178.1,169.3 179.6,164.9 178.4,167.9 C177.2,170.9 168.3,193.5 166.0,199.1 C163.7,204.8 154.7,227.7 153.2,230.2 C151.6,232.8 148.4,226.8 148.6,227.3 C148.8,227.9 154.6,234.3 155.1,236.1 C155.5,238.0 154.3,246.5 153.4,248.1 C152.5,249.6 146.5,253.5 145.0,253.5 C143.5,253.5 137.5,249.6 136.6,248.1 C135.7,246.5 134.5,238.0 134.9,236.1 C135.4,234.3 141.0,228.3 141.4,227.3 C141.8,226.4 138.4,228.9 138.8,225.8 C139.3,222.6 144.6,198.8 146.0,192.9 C147.3,186.9 152.9,162.9 153.6,160.1 C154.2,157.3 153.0,164.5 153.2,162.0 C153.3,159.5 155.7,137.9 155.0,132.5 C154.3,127.1 146.4,104.0 145.4,102.9 C144.4,101.9 145.6,116.1 144.0,121.0 C142.4,125.9 127.8,149.2 128.0,157.0 C128.2,164.8 143.5,200.7 146.0,207.0 C148.5,213.3 154.6,220.0 155.0,226.0 C155.3,232.1 151.4,264.8 149.9,273.1 C148.4,281.4 139.8,313.7 138.8,317.7 C137.8,321.6 139.6,312.9 138.9,316.6 C138.2,320.3 132.4,350.7 130.9,358.2 C129.4,365.8 123.5,396.2 122.5,399.8 C121.4,403.4 119.1,396.7 119.6,397.6 C120.1,398.5 127.4,407.1 127.9,409.7 C128.5,412.3 127.0,423.9 125.8,426.1 C124.7,428.2 117.0,433.5 115.0,433.5 C113.0,433.5 105.3,428.2 104.2,426.1 C103.0,423.9 101.5,412.3 102.1,409.7 C102.6,407.1 110.1,398.7 110.4,397.6 C110.7,396.6 106.0,402.0 105.5,398.2 C105.1,394.4 105.1,363.5 105.1,355.8 C105.0,348.1 105.1,317.3 105.1,313.4 C105.1,309.4 104.9,316.4 105.2,312.3 C105.5,308.3 107.9,276.9 108.1,268.9 C108.3,260.9 107.8,228.4 107.0,224.0 C106.3,219.5 101.3,220.0 100.0,220.0 C98.7,220.0 93.7,219.5 93.0,224.0 C92.2,228.4 91.7,260.9 91.9,268.9 C92.1,276.9 94.5,308.3 94.8,312.3 C95.1,316.4 94.9,309.4 94.9,313.4 C94.9,317.3 95.0,348.1 94.9,355.8 C94.9,363.5 94.9,394.4 94.5,398.2 C94.0,402.0 89.3,396.6 89.6,397.6 C89.9,398.7 97.4,407.1 97.9,409.7 C98.5,412.3 97.0,423.9 95.8,426.1 C94.7,428.2 87.0,433.5 85.0,433.5 C83.0,433.5 75.3,428.2 74.2,426.1 C73.0,423.9 71.5,412.3 72.1,409.7 C72.6,407.1 79.9,398.5 80.4,397.6 C80.9,396.7 78.6,403.4 77.5,399.8 C76.5,396.2 70.6,365.8 69.1,358.2 C67.6,350.7 61.8,320.3 61.1,316.6 C60.4,312.9 62.2,321.6 61.2,317.7 C60.2,313.7 51.6,281.4 50.1,273.1 C48.6,264.8 44.7,232.1 45.0,226.0 C45.4,220.0 51.5,213.3 54.0,207.0 C56.5,200.7 71.8,164.8 72.0,157.0 C72.2,149.2 57.6,125.9 56.0,121.0 C54.4,116.1 55.6,101.9 54.6,102.9 C53.6,104.0 45.7,127.1 45.0,132.5 C44.3,137.9 46.7,159.5 46.8,162.0 C47.0,164.5 45.8,157.3 46.4,160.1 C47.1,162.9 52.7,186.9 54.0,192.9 C55.4,198.8 60.7,222.6 61.2,225.8 C61.6,228.9 58.2,226.4 58.6,227.3 C59.0,228.3 64.6,234.3 65.1,236.1 C65.5,238.0 64.3,246.5 63.4,248.1 C62.5,249.6 56.5,253.5 55.0,253.5 C53.5,253.5 47.5,249.6 46.6,248.1 C45.7,246.5 44.5,238.0 44.9,236.1 C45.4,234.3 51.2,227.9 51.4,227.3 C51.6,226.8 48.4,232.8 46.8,230.2 C45.3,227.7 36.3,204.8 34.0,199.1 C31.7,193.5 22.8,170.9 21.6,167.9 C20.4,164.9 21.9,169.3 21.2,166.0 C20.4,162.7 13.3,138.0 13.0,131.5 C12.7,125.1 16.8,99.1 17.4,95.1 C18.0,91.1 18.7,89.1 19.3,87.4 C20.0,85.8 23.3,78.4 24.7,76.9 C26.2,75.4 33.1,71.3 35.2,70.7 C37.3,70.2 45.5,70.3 47.5,70.9 C49.6,71.5 56.4,75.8 57.8,77.4 C59.2,79.0 62.5,86.1 62.8,88.1 C63.1,90.2 59.8,100.7 61.0,99.7 C62.2,98.8 73.5,82.2 76.0,78.0 C78.5,73.8 87.3,56.4 89.0,54.0 C90.7,51.6 95.2,52.6 95.0,52.0 C94.8,51.4 88.3,48.2 87.0,47.0 C85.7,45.8 81.7,40.5 81.0,39.0 C80.3,37.5 79.0,31.7 79.0,30.0 C79.0,28.3 80.2,21.6 81.0,20.0 C81.8,18.4 86.3,12.9 88.0,12.0 C89.7,11.1 98.9,10.2 100.0,10.0 C101.1,9.8 98.9,9.8 100.0,10.0 Z";
+const BODY_VB = [200, 440];
+
 const BODY_FRONT = [
-  { m:"shoulders", shape:"ellipse", a:{cx:36,cy:62,rx:13,ry:16} },
-  { m:"shoulders", shape:"ellipse", a:{cx:124,cy:62,rx:13,ry:16} },
-  { m:"chest",     shape:"rect",    a:{x:52,y:58,width:56,height:32,rx:10} },
-  { m:"biceps",    shape:"rect",    a:{x:22,y:76,width:15,height:46,rx:7} },
-  { m:"biceps",    shape:"rect",    a:{x:123,y:76,width:15,height:46,rx:7} },
-  { m:"forearms",  shape:"rect",    a:{x:19,y:124,width:14,height:44,rx:7} },
-  { m:"forearms",  shape:"rect",    a:{x:127,y:124,width:14,height:44,rx:7} },
-  { m:"abs",       shape:"rect",    a:{x:63,y:92,width:34,height:52,rx:8} },
-  { m:"obliques",  shape:"rect",    a:{x:48,y:96,width:14,height:44,rx:7} },
-  { m:"obliques",  shape:"rect",    a:{x:98,y:96,width:14,height:44,rx:7} },
-  { m:"quads",     shape:"rect",    a:{x:54,y:148,width:24,height:64,rx:9} },
-  { m:"quads",     shape:"rect",    a:{x:82,y:148,width:24,height:64,rx:9} },
-  { m:"calves",    shape:"rect",    a:{x:56,y:216,width:19,height:46,rx:8} },
-  { m:"calves",    shape:"rect",    a:{x:85,y:216,width:19,height:46,rx:8} },
+  { m:"shoulders", shape:"ellipse", a:{cx:43,cy:90,rx:15.5,ry:17} },
+  { m:"shoulders", shape:"ellipse", a:{cx:157,cy:90,rx:15.5,ry:17} },
+  { m:"chest", shape:"path", a:{d:"M95.0,90.0 C92.8,87.5 87.8,87.7 84.0,88.0 C80.2,88.3 75.5,89.5 72.0,92.0 C68.5,94.5 63.8,98.8 63.0,103.0 C62.2,107.2 64.3,113.2 67.0,117.0 C69.7,120.8 75.2,124.5 79.0,126.0 C82.8,127.5 87.0,127.2 90.0,126.0 C93.0,124.8 95.8,122.8 97.0,119.0 C98.2,115.2 97.3,107.8 97.0,103.0 C96.7,98.2 97.2,92.5 95.0,90.0Z"} },
+  { m:"chest", shape:"path", a:{d:"M105.0,90.0 C107.2,87.5 112.2,87.7 116.0,88.0 C119.8,88.3 124.5,89.5 128.0,92.0 C131.5,94.5 136.2,98.8 137.0,103.0 C137.8,107.2 135.7,113.2 133.0,117.0 C130.3,120.8 124.8,124.5 121.0,126.0 C117.2,127.5 113.0,127.2 110.0,126.0 C107.0,124.8 104.2,122.8 103.0,119.0 C101.8,115.2 102.7,107.8 103.0,103.0 C103.3,98.2 102.8,92.5 105.0,90.0 Z"} },
+  { m:"abs", shape:"path", a:{d:"M93.0,134.0 C95.0,128.7 105.0,128.7 107.0,134.0 C109.0,139.3 106.2,154.5 105.0,166.0 C103.8,177.5 101.7,203.0 100.0,203.0 C98.3,203.0 96.2,177.5 95.0,166.0 C93.8,154.5 91.0,139.3 93.0,134.0 Z"} },
+  { m:"obliques", shape:"path", a:{d:"M78.0,134.0 C74.8,135.0 68.7,144.0 68.0,152.0 C67.3,160.0 71.7,174.7 74.0,182.0 C76.3,189.3 79.5,197.0 82.0,196.0 C84.5,195.0 88.2,184.3 89.0,176.0 C89.8,167.7 88.8,153.0 87.0,146.0 C85.2,139.0 81.2,133.0 78.0,134.0Z"} },
+  { m:"obliques", shape:"path", a:{d:"M122.0,134.0 C125.2,135.0 131.3,144.0 132.0,152.0 C132.7,160.0 128.3,174.7 126.0,182.0 C123.7,189.3 120.5,197.0 118.0,196.0 C115.5,195.0 111.8,184.3 111.0,176.0 C110.2,167.7 111.2,153.0 113.0,146.0 C114.8,139.0 118.8,133.0 122.0,134.0 Z"} },
+  { m:"biceps", shape:"path", a:{d:"M54.6,102.9 C59.2,109.2 46.3,122.7 45.0,132.5 C43.7,142.3 50.8,156.4 46.8,162.0 C42.9,167.6 26.8,171.1 21.2,166.0 C15.5,160.9 13.6,143.3 13.0,131.5 C12.4,119.7 10.5,99.8 17.4,95.1 C24.3,90.3 50.0,96.7 54.6,102.9Z"} },
+  { m:"biceps", shape:"path", a:{d:"M145.4,102.9 C140.8,109.2 153.7,122.7 155.0,132.5 C156.3,142.3 149.2,156.4 153.2,162.0 C157.1,167.6 173.2,171.1 178.8,166.0 C184.5,160.9 186.4,143.3 187.0,131.5 C187.6,119.7 189.5,99.8 182.6,95.1 C175.7,90.3 150.0,96.7 145.4,102.9 Z"} },
+  { m:"forearms", shape:"path", a:{d:"M46.4,160.1 C51.8,164.3 51.6,181.9 54.0,192.9 C56.5,203.8 62.4,219.5 61.2,225.8 C60.0,232.0 51.4,234.7 46.8,230.2 C42.3,225.8 38.2,209.5 34.0,199.1 C29.8,188.7 19.5,174.4 21.6,167.9 C23.7,161.4 41.0,156.0 46.4,160.1Z"} },
+  { m:"forearms", shape:"path", a:{d:"M153.6,160.1 C148.2,164.3 148.4,181.9 146.0,192.9 C143.5,203.8 137.6,219.5 138.8,225.8 C140.0,232.0 148.6,234.7 153.2,230.2 C157.7,225.8 161.8,209.5 166.0,199.1 C170.2,188.7 180.5,174.4 178.4,167.9 C176.3,161.4 159.0,156.0 153.6,160.1 Z"} },
+  { m:"quads", shape:"path", a:{d:"M93.0,224.0 C100.8,231.1 91.6,254.2 91.9,268.9 C92.2,283.6 99.9,304.2 94.8,312.3 C89.7,320.5 68.7,324.2 61.2,317.7 C53.8,311.1 52.8,288.4 50.1,273.1 C47.4,257.8 37.9,234.2 45.0,226.0 C52.2,217.9 85.2,216.8 93.0,224.0Z"} },
+  { m:"quads", shape:"path", a:{d:"M107.0,224.0 C99.2,231.1 108.4,254.2 108.1,268.9 C107.8,283.6 100.1,304.2 105.2,312.3 C110.3,320.5 131.3,324.2 138.8,317.7 C146.2,311.1 147.2,288.4 149.9,273.1 C152.6,257.8 162.1,234.2 155.0,226.0 C147.8,217.9 114.8,216.8 107.0,224.0 Z"} },
+  { m:"calves", shape:"path", a:{d:"M94.9,313.4 C100.6,319.9 95.0,341.6 94.9,355.8 C94.9,369.9 97.4,390.9 94.5,398.2 C91.6,405.5 81.8,406.5 77.5,399.8 C73.3,393.1 71.8,372.1 69.1,358.2 C66.3,344.4 56.8,324.1 61.1,316.6 C65.4,309.1 89.3,306.9 94.9,313.4Z"} },
+  { m:"calves", shape:"path", a:{d:"M105.1,313.4 C99.4,319.9 105.0,341.6 105.1,355.8 C105.1,369.9 102.6,390.9 105.5,398.2 C108.4,405.5 118.2,406.5 122.5,399.8 C126.7,393.1 128.2,372.1 130.9,358.2 C133.7,344.4 143.2,324.1 138.9,316.6 C134.6,309.1 110.7,306.9 105.1,313.4 Z"} },
 ];
+
 const BODY_BACK = [
-  { m:"traps",      shape:"rect",    a:{x:58,y:44,width:44,height:22,rx:8} },
-  { m:"shoulders",  shape:"ellipse", a:{cx:36,cy:62,rx:13,ry:16} },
-  { m:"shoulders",  shape:"ellipse", a:{cx:124,cy:62,rx:13,ry:16} },
-  { m:"back",       shape:"rect",    a:{x:50,y:66,width:60,height:52,rx:10} },
-  { m:"triceps",    shape:"rect",    a:{x:22,y:76,width:15,height:46,rx:7} },
-  { m:"triceps",    shape:"rect",    a:{x:123,y:76,width:15,height:46,rx:7} },
-  { m:"forearms",   shape:"rect",    a:{x:19,y:124,width:14,height:44,rx:7} },
-  { m:"forearms",   shape:"rect",    a:{x:127,y:124,width:14,height:44,rx:7} },
-  { m:"lowerBack",  shape:"rect",    a:{x:60,y:118,width:40,height:26,rx:8} },
-  { m:"glutes",     shape:"rect",    a:{x:54,y:148,width:52,height:30,rx:10} },
-  { m:"hamstrings", shape:"rect",    a:{x:54,y:182,width:24,height:44,rx:9} },
-  { m:"hamstrings", shape:"rect",    a:{x:82,y:182,width:24,height:44,rx:9} },
-  { m:"calves",     shape:"rect",    a:{x:56,y:230,width:19,height:32,rx:8} },
-  { m:"calves",     shape:"rect",    a:{x:85,y:230,width:19,height:32,rx:8} },
+  { m:"shoulders", shape:"ellipse", a:{cx:43,cy:90,rx:15.5,ry:17} },
+  { m:"shoulders", shape:"ellipse", a:{cx:157,cy:90,rx:15.5,ry:17} },
+  { m:"traps", shape:"path", a:{d:"M74.0,78.0 C81.2,73.7 118.8,73.7 126.0,78.0 C133.2,82.3 121.3,98.5 117.0,104.0 C112.7,109.5 105.7,111.0 100.0,111.0 C94.3,111.0 87.3,109.5 83.0,104.0 C78.7,98.5 66.8,82.3 74.0,78.0 Z"} },
+  { m:"back", shape:"path", a:{d:"M62.0,102.0 C75.7,96.3 124.3,96.3 138.0,102.0 C151.7,107.7 145.7,125.0 144.0,136.0 C142.3,147.0 135.3,161.2 128.0,168.0 C120.7,174.8 109.3,177.0 100.0,177.0 C90.7,177.0 79.3,174.8 72.0,168.0 C64.7,161.2 57.7,147.0 56.0,136.0 C54.3,125.0 48.3,107.7 62.0,102.0 Z"} },
+  { m:"lowerBack", shape:"path", a:{d:"M85.0,169.0 C89.5,164.7 110.5,164.7 115.0,169.0 C119.5,173.3 114.5,189.3 112.0,195.0 C109.5,200.7 104.0,203.0 100.0,203.0 C96.0,203.0 90.5,200.7 88.0,195.0 C85.5,189.3 80.5,173.3 85.0,169.0 Z"} },
+  { m:"glutes", shape:"path", a:{d:"M65.0,199.0 C76.0,194.5 124.0,194.5 135.0,199.0 C146.0,203.5 136.8,219.5 131.0,226.0 C125.2,232.5 110.3,238.0 100.0,238.0 C89.7,238.0 74.8,232.5 69.0,226.0 C63.2,219.5 54.0,203.5 65.0,199.0 Z"} },
+  { m:"triceps", shape:"path", a:{d:"M54.6,102.9 C59.2,109.2 46.3,122.7 45.0,132.5 C43.7,142.3 50.8,156.4 46.8,162.0 C42.9,167.6 26.8,171.1 21.2,166.0 C15.5,160.9 13.6,143.3 13.0,131.5 C12.4,119.7 10.5,99.8 17.4,95.1 C24.3,90.3 50.0,96.7 54.6,102.9Z"} },
+  { m:"triceps", shape:"path", a:{d:"M145.4,102.9 C140.8,109.2 153.7,122.7 155.0,132.5 C156.3,142.3 149.2,156.4 153.2,162.0 C157.1,167.6 173.2,171.1 178.8,166.0 C184.5,160.9 186.4,143.3 187.0,131.5 C187.6,119.7 189.5,99.8 182.6,95.1 C175.7,90.3 150.0,96.7 145.4,102.9 Z"} },
+  { m:"forearms", shape:"path", a:{d:"M46.4,160.1 C51.8,164.3 51.6,181.9 54.0,192.9 C56.5,203.8 62.4,219.5 61.2,225.8 C60.0,232.0 51.4,234.7 46.8,230.2 C42.3,225.8 38.2,209.5 34.0,199.1 C29.8,188.7 19.5,174.4 21.6,167.9 C23.7,161.4 41.0,156.0 46.4,160.1Z"} },
+  { m:"forearms", shape:"path", a:{d:"M153.6,160.1 C148.2,164.3 148.4,181.9 146.0,192.9 C143.5,203.8 137.6,219.5 138.8,225.8 C140.0,232.0 148.6,234.7 153.2,230.2 C157.7,225.8 161.8,209.5 166.0,199.1 C170.2,188.7 180.5,174.4 178.4,167.9 C176.3,161.4 159.0,156.0 153.6,160.1 Z"} },
+  { m:"hamstrings", shape:"path", a:{d:"M93.0,224.0 C100.8,231.1 91.6,254.2 91.9,268.9 C92.2,283.6 99.9,304.2 94.8,312.3 C89.7,320.5 68.7,324.2 61.2,317.7 C53.8,311.1 52.8,288.4 50.1,273.1 C47.4,257.8 37.9,234.2 45.0,226.0 C52.2,217.9 85.2,216.8 93.0,224.0Z"} },
+  { m:"hamstrings", shape:"path", a:{d:"M107.0,224.0 C99.2,231.1 108.4,254.2 108.1,268.9 C107.8,283.6 100.1,304.2 105.2,312.3 C110.3,320.5 131.3,324.2 138.8,317.7 C146.2,311.1 147.2,288.4 149.9,273.1 C152.6,257.8 162.1,234.2 155.0,226.0 C147.8,217.9 114.8,216.8 107.0,224.0 Z"} },
+  { m:"calves", shape:"path", a:{d:"M94.9,313.4 C100.6,319.9 95.0,341.6 94.9,355.8 C94.9,369.9 97.4,390.9 94.5,398.2 C91.6,405.5 81.8,406.5 77.5,399.8 C73.3,393.1 71.8,372.1 69.1,358.2 C66.3,344.4 56.8,324.1 61.1,316.6 C65.4,309.1 89.3,306.9 94.9,313.4Z"} },
+  { m:"calves", shape:"path", a:{d:"M105.1,313.4 C99.4,319.9 105.0,341.6 105.1,355.8 C105.1,369.9 102.6,390.9 105.5,398.2 C108.4,405.5 118.2,406.5 122.5,399.8 C126.7,393.1 128.2,372.1 130.9,358.2 C133.7,344.4 143.2,324.1 138.9,316.6 C134.6,309.1 110.7,306.9 105.1,313.4 Z"} },
 ];
 
 const PROTOCOL = {"POWER":"50-80% RM · move the load as fast as humanly possible · 3-5 reps × 5-10 sets · rest 2-5 min. Stop the set the moment bar speed drops - power dies with fatigue.","STRENGTH":"90-100% RM · explosive concentric, controlled eccentric · 1-6 reps × 5-8 sets · rest 3-5 min. Brace hard, own every rep, leave 1-2 in reserve.","HYPERTROPHY":"65-75% RM · slow and deliberate, especially the eccentric · 6-12 reps × 4-6 drop sets at 20-30% drops · rest 1-3 min. Chase the stretch and the burn, not the number.","ENDURANCE":"40-60% RM · smooth controlled tempo, no bouncing · 15-30+ reps × 3-5 sets · rest 30-60 sec. Breathe rhythmically and hold form as fatigue builds.","ISOMETRIC":"85-100% RM · hold the hardest position · 3-10 sec × 3-5 reps × 3-5 sets · rest 2-3 min. Build tension gradually, then push maximally without moving."};
@@ -1159,21 +1168,35 @@ function renderMuscleBreakdown(list){
 }
 function bodyRegionTag(r, counts, peak){
   const c = counts[r.m] || {pri:0,sec:0}, total = c.pri+c.sec;
-  const inten = total ? (0.22 + 0.58*Math.min(1, total/peak)) : 0.06;
+  const inten = total ? (0.22 + 0.58*Math.min(1, total/peak)) : 0.05;
   const cls = "body-region"+(calSelectedMuscle===r.m ? " sel" : "");
   const style = "--mc:"+MUSCLE_META[r.m].color+";--inten:"+inten.toFixed(2);
   const title = "<title>"+esc(MUSCLE_META[r.m].label)+" — "+c.pri+" primary, "+c.sec+" secondary</title>";
   if(r.shape==="ellipse"){
     return '<ellipse class="'+cls+'" data-act="muscleClick" data-m="'+r.m+'" cx="'+r.a.cx+'" cy="'+r.a.cy+'" rx="'+r.a.rx+'" ry="'+r.a.ry+'" style="'+style+'">'+title+'</ellipse>';
   }
-  return '<rect class="'+cls+'" data-act="muscleClick" data-m="'+r.m+'" x="'+r.a.x+'" y="'+r.a.y+'" width="'+r.a.width+'" height="'+r.a.height+'" rx="'+r.a.rx+'" style="'+style+'">'+title+'</rect>';
+  return '<path class="'+cls+'" data-act="muscleClick" data-m="'+r.m+'" d="'+r.a.d+'" style="'+style+'">'+title+'</path>';
 }
 function bodySvgView(regions, counts, peak, label){
   const shapes = regions.map(r => bodyRegionTag(r, counts, peak)).join('');
-  return '<div class="body-col"><svg class="body-svg" viewBox="0 0 160 270" width="140" height="236">'
-    + '<circle class="body-deco" cx="80" cy="18" r="14"></circle>'
-    + '<rect class="body-deco" x="73" y="30" width="14" height="10" rx="3"></rect>'
-    + shapes
+  const uid = "body-"+label.toLowerCase();
+  const [vw, vh] = BODY_VB;
+  const meshH = []; for(let y=18; y<vh; y+=13) meshH.push('<line x1="0" y1="'+y+'" x2="'+vw+'" y2="'+y+'" class="mesh-h"></line>');
+  const meshV = []; for(let x=8; x<vw; x+=15) meshV.push('<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+vh+'" class="mesh-v"></line>');
+  return '<div class="body-col"><svg class="body-svg" viewBox="0 0 '+vw+' '+vh+'" width="140" height="'+Math.round(140*vh/vw)+'">'
+    + '<defs>'
+    + '<filter id="'+uid+'-glow" x="-50%" y="-50%" width="200%" height="200%">'
+    +   '<feGaussianBlur stdDeviation="2" result="b"></feGaussianBlur>'
+    +   '<feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>'
+    + '</filter>'
+    + '<clipPath id="'+uid+'-clip"><path d="'+BODY_SIL+'"></path></clipPath>'
+    + '</defs>'
+    + '<g class="body-chassis" filter="url(#'+uid+'-glow)">'
+    +   '<path d="'+BODY_SIL+'" class="chassis-fill"></path>'
+    +   '<path d="'+BODY_SIL+'" class="chassis-outline"></path>'
+    + '</g>'
+    + '<g clip-path="url(#'+uid+'-clip)" class="body-mesh">' + meshH.join('') + meshV.join('') + '</g>'
+    + '<g clip-path="url(#'+uid+'-clip)" class="body-regions" filter="url(#'+uid+'-glow)">' + shapes + '</g>'
     + '</svg><div class="body-view-label">'+esc(label)+'</div></div>';
 }
 function muscleDetailHtml(mKey, list){
