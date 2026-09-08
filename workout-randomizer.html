@@ -707,15 +707,36 @@ function weightedPick(items, weights){
   for(let i=0;i<items.length;i++){ r -= weights[i]; if(r <= 0) return items[i]; }
   return items[items.length-1];
 }
-// Pick within a pool, favouring exercises used least and avoiding an immediate repeat.
+// Map of exercise name -> timestamp it was most recently logged (actually
+// performed), not just rolled. Rebuilt fresh each time it's needed since
+// logEntries can change between rolls.
+function lastLoggedMap(){
+  const m = {};
+  logEntries.forEach(e => { if(m[e.name] === undefined || e.ts > m[e.name]) m[e.name] = e.ts; });
+  return m;
+}
+// Exercises logged recently are weighted down, not excluded - the penalty is
+// steepest the day it was logged and fades back to ~full weight over a
+// couple of weeks, so it keeps rotating rather than repeating too soon.
+function recencyWeight(name, lastLogged){
+  const last = lastLogged[name];
+  if(last == null) return 1;
+  const days = Math.max(0, (Date.now() - last) / 86400000);
+  return 1 - 0.85 * Math.exp(-days / 3.5);
+}
+function exWeight(t, name, slotKey, lastLogged){
+  let w = 1 / (1 + (rollStats.ex[t+"::"+name] || 0));
+  if(rollStats.lastEx[slotKey] === name) w *= 0.15;
+  w *= recencyWeight(name, lastLogged);
+  return w;
+}
+// Pick within a pool, favouring exercises used least, avoiding an immediate
+// repeat, and weighting down anything logged recently.
 function pickFromPool(t, pool, slotKey){
   if(!pool.length) return null;
   if(pool.length === 1) return pool[0].name;
-  const ws = pool.map(e => {
-    let w = 1 / (1 + (rollStats.ex[t+"::"+e.name] || 0));
-    if(rollStats.lastEx[slotKey] === e.name) w *= 0.15;
-    return w;
-  });
+  const lastLogged = lastLoggedMap();
+  const ws = pool.map(e => exWeight(t, e.name, slotKey, lastLogged));
   return weightedPick(pool, ws).name;
 }
 function recordPick(t, g, name, slotKey){
@@ -828,11 +849,8 @@ function resolveFocusChest(){
     focusNote = "Every chest option is already in today's main roll, so " + cur + " stays.";
     return;
   }
-  const ws = alt.map(e => {
-    let w = 1 / (1 + (rollStats.ex["CHEST::"+e.name] || 0));
-    if(rollStats.lastEx["CHEST"] === e.name) w *= 0.15;
-    return w;
-  });
+  const lastLogged = lastLoggedMap();
+  const ws = alt.map(e => exWeight("CHEST", e.name, "CHEST", lastLogged));
   const chosen = weightedPick(alt, ws);
   picks.CHEST = chosen.name;
   rollStats.ex["CHEST::"+chosen.name] = (rollStats.ex["CHEST::"+chosen.name] || 0) + 1;
